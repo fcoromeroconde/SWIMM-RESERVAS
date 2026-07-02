@@ -1028,6 +1028,29 @@ const DEFAULT_CONFIG={
   admin_pin:'',
 };
 
+  // ==========================================
+  // AUTO-REFRESH Y DETECCION DE INACTIVIDAD
+  // ==========================================
+  let lastActivityTime = Date.now();
+  
+  // Actualizar tiempo de inactividad
+  window.addEventListener('mousemove', () => lastActivityTime = Date.now());
+  window.addEventListener('keydown', () => lastActivityTime = Date.now());
+  window.addEventListener('click', () => lastActivityTime = Date.now());
+
+  // Revisar cada 5 minutos (300,000 ms)
+  setInterval(() => {
+    const idleTime = Date.now() - lastActivityTime;
+    // Si ha estado inactivo por mas de 3 minutos, recargar la pagina silenciosamente
+    if (idleTime > 3 * 60 * 1000) {
+      console.log('Recargando por inactividad para sincronizar datos...');
+      location.reload();
+    } else {
+      // Si esta activo, mostrar un toast sugiriendo refrescar
+      toast('Sugerencia: Presiona F5 para sincronizar los ultimos cambios de otros usuarios.', 'info');
+    }
+  }, 5 * 60 * 1000);
+
 // ================================================================
 // SUPABASE CONFIGURATION
 // ================================================================
@@ -3991,9 +4014,20 @@ function confirmarModoProduccion(){
   const cfg=DB.getConfig();
   const adminPin=cfg.admin_pin||'';
   const pinConfig=localStorage.getItem('swimm_pin_configured');
-  // Limpiar todos los datos
+    // Limpiar todos los datos localmente
   Object.values(LS_KEYS).forEach(k=>localStorage.removeItem(k));
   localStorage.removeItem('swimm_v11_init');
+
+  // Limpiar en Supabase
+  if(window.swimmDb) {
+    try {
+      swimmDb.from('app_state').delete().in('key', ['clientes','reservas','facturacion','bloqueos']).then(() => {
+        console.log('Supabase limpiado');
+      });
+    } catch(e) {
+      console.error('Error borrando en supabase', e);
+    }
+  }
   // Activar bandera de producción
   localStorage.setItem('swimm_modo_produccion','1');
   localStorage.setItem('swimm_pin_configured',pinConfig||'1');
@@ -4082,6 +4116,9 @@ document.getElementById('fact-drop-zone').addEventListener('drop',e=>{
 </script>
 </body>
 </html>
+
+
+
 
 
 
