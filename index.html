@@ -1028,28 +1028,28 @@ const DEFAULT_CONFIG={
 // ================================================================
 const supabaseUrl = 'https://yhnziqyhlfmcvqvqkmxk.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlobnppcXlobGZtY3ZxdnFrbXhrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMTQ3NDQsImV4cCI6MjA5ODU5MDc0NH0.IIDQ33mQbA236oBhRn21bJ3S1bdoSPLTfn4BlvpD1R8';
-let supabase = null;
+let swimmDb = null;
 try {
   if (window.supabase) {
-    supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    swimmDb = window.supabase.createClient(supabaseUrl, supabaseKey);
   }
 } catch (err) {
   console.error("Error inicializando Supabase:", err);
 }
 
 async function syncToSupabase(key, value) {
-  if(!supabase) return;
+  if(!swimmDb) return;
   try {
-    await supabase.from('app_state').upsert({ key: key, value: value });
+    await swimmDb.from('app_state').upsert({ key: key, value: value });
   } catch(e) {
     console.error('Error syncing to Supabase:', e);
   }
 }
 
 async function loadFromSupabase() {
-  if(!supabase) return false;
+  if(!swimmDb) return false;
   try {
-    const { data, error } = await supabase.from('app_state').select('*');
+    const { data, error } = await swimmDb.from('app_state').select('*');
     if(error) throw error;
     if(data && data.length > 0) {
       data.forEach(row => {
@@ -4064,5 +4064,6 @@ document.getElementById('fact-drop-zone').addEventListener('drop',e=>{
 </script>
 </body>
 </html>
+
 
 
