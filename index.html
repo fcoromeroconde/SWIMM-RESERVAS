@@ -4002,40 +4002,48 @@ function activarModoProduccion(){
   setTimeout(()=>document.getElementById('confirm-produccion-input')?.focus(),100);
 }
 
-function confirmarModoProduccion(){
-  if(!isAdmin()){toast('🔒 Solo el administrador puede activar el Modo Producción.','error');return;}
+async function confirmarModoProduccion(){
+  if(!isAdmin()){toast('?? Solo el administrador puede activar el Modo Produccin.','error');return;}
   const input=document.getElementById('confirm-produccion-input');
   const errEl=document.getElementById('produccion-error');
   if(!input||input.value.trim().toUpperCase()!=='PRODUCCION'){
     if(errEl){errEl.style.display='block';errEl.textContent='Debes escribir exactamente PRODUCCION (sin acento).';}
     return;
   }
+  
+  // Mostrar feedback visual para que el usuario espere
+  toast('Limpiando base de datos en la nube, por favor espera...', 'info');
+  document.getElementById('modal-footer').innerHTML = '<span style="color:var(--text-secondary)">Procesando...</span>';
+
   // Guardar PIN antes de limpiar
   const cfg=DB.getConfig();
   const adminPin=cfg.admin_pin||'';
   const pinConfig=localStorage.getItem('swimm_pin_configured');
-    // Limpiar todos los datos localmente
+  
+  // Limpiar todos los datos localmente
   Object.values(LS_KEYS).forEach(k=>localStorage.removeItem(k));
   localStorage.removeItem('swimm_v11_init');
 
   // Limpiar en Supabase
   if(window.swimmDb) {
     try {
-      swimmDb.from('app_state').delete().in('key', ['clientes','reservas','facturacion','bloqueos']).then(() => {
-        console.log('Supabase limpiado');
-      });
+      await swimmDb.from('app_state').delete().in('key', ['clientes','reservas','facturacion','bloqueos']);
+      console.log('Supabase limpiado');
     } catch(e) {
       console.error('Error borrando en supabase', e);
     }
   }
-  // Activar bandera de producción
+
+  // Activar bandera de produccin
   localStorage.setItem('swimm_modo_produccion','1');
   localStorage.setItem('swimm_pin_configured',pinConfig||'1');
+  
   // Restaurar config limpia con el PIN del admin
   DB.saveConfig(cfg);
+  
   cerrarModal();
-  toast('🚀 Modo Producción activado. Iniciando en ceros...','success');
-  setTimeout(()=>location.reload(),1200);
+  toast('?? Modo Produccin activado. Iniciando en ceros...', 'success');
+  setTimeout(()=>location.reload(), 1200);
 }
 
 function renderModoProduccionStatus(){
@@ -4116,6 +4124,7 @@ document.getElementById('fact-drop-zone').addEventListener('drop',e=>{
 </script>
 </body>
 </html>
+
 
 
 
