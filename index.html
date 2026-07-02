@@ -4026,9 +4026,14 @@ async function confirmarModoProduccion(){
 
   // Limpiar en Supabase
   if(window.swimmDb) {
-    try {
-      await swimmDb.from('app_state').delete().in('key', ['clientes','reservas','facturacion','bloqueos']);
-      console.log('Supabase limpiado');
+        try {
+      await swimmDb.from('app_state').upsert([
+        { key: 'clientes', value: {} },
+        { key: 'reservas', value: [] },
+        { key: 'facturacion', value: [] },
+        { key: 'bloqueos', value: [] }
+      ]);
+      console.log('Supabase limpiado mediante upsert vacio');
     } catch(e) {
       console.error('Error borrando en supabase', e);
     }
@@ -4124,6 +4129,7 @@ document.getElementById('fact-drop-zone').addEventListener('drop',e=>{
 </script>
 </body>
 </html>
+
 
 
 
