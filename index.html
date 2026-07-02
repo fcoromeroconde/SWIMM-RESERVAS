@@ -474,6 +474,13 @@ textarea.form-control{resize:vertical;min-height:70px}
         <span class="nav-badge" id="badge-parametros"></span>
       </div>
     </div>
+        <div class="sidebar-footer" id="sidebar-footer" style="padding:12px 18px;border-top:1px solid rgba(255,255,255,0.05);margin-top:auto;display:flex;flex-direction:column;align-items:flex-start">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span id="db-status-dot" style="width:10px;height:10px;border-radius:50%;background:var(--rojo);flex-shrink:0;box-shadow:0 0 5px rgba(231,76,60,0.5)"></span>
+        <span class="nav-label" style="font-size:0.8rem;opacity:0.9;color:white;font-weight:600;">v2.3 APP</span>
+      </div>
+      <div class="nav-label" style="font-size:0.7rem;opacity:0.6;color:white;margin-left:18px;">Powered by Supabase</div>
+    </div>
     <div class="sidebar-toggle" onclick="toggleSidebar()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
       <span class="nav-label" style="font-size:0.78rem">Colapsar</span>
@@ -1048,9 +1055,10 @@ async function syncToSupabase(key, value) {
 
 async function loadFromSupabase() {
   if(!swimmDb) return false;
-  try {
-    const { data, error } = await swimmDb.from('app_state').select('*');
-    if(error) throw error;
+      try {
+      const { data, error } = await swimmDb.from('app_state').select('*');
+      if(error) throw error;
+      window.swimmDbConnectionSuccess = true;
     if(data && data.length > 0) {
       data.forEach(row => {
         localStorage.setItem(LS_KEYS[row.key] || `swimm_${row.key}`, JSON.stringify(row.value));
@@ -3992,9 +4000,7 @@ function confirmarModoProduccion(){
   localStorage.setItem('swimm_modo_produccion','1');
   localStorage.setItem('swimm_pin_configured',pinConfig||'1');
   // Restaurar config limpia con el PIN del admin
-  const cfgLimpia=JSON.parse(JSON.stringify(DEFAULT_CONFIG));
-  cfgLimpia.admin_pin=adminPin;
-  DB.saveConfig(cfgLimpia);
+  DB.saveConfig(cfg);
   cerrarModal();
   toast('🚀 Modo Producción activado. Iniciando en ceros...','success');
   setTimeout(()=>location.reload(),1200);
@@ -4031,11 +4037,25 @@ document.getElementById('fact-drop-zone').addEventListener('drop',e=>{
   
   try { await Promise.race([loadFromSupabase(), new Promise(r => setTimeout(r, 3000))]); } catch(e) {}
   
-  if(loadingOverlay) loadingOverlay.style.display = 'none';
+    if(loadingOverlay) loadingOverlay.style.display = 'none';
+
+  // Actualizar estado de DB
+  const dbDot = document.getElementById('db-status-dot');
+  if(dbDot) {
+    if(window.swimmDbConnectionSuccess) {
+      dbDot.style.background = 'var(--verde)';
+      dbDot.style.boxShadow = '0 0 5px rgba(46,204,113,0.5)';
+      dbDot.title = 'Conectado a Supabase';
+    } else {
+      dbDot.style.background = 'var(--rojo)';
+      dbDot.style.boxShadow = '0 0 5px rgba(231,76,60,0.5)';
+      dbDot.title = 'Error de conexin a base de datos';
+    }
+  }
 
   const st=localStorage.getItem('swimm_theme');
   if(st){document.documentElement.setAttribute('data-theme',st);document.getElementById('dark-btn').textContent=st==='dark'?'☀️':'🌙';}
-  initDatosEjemplo();
+  // initDatosEjemplo();
   actualizarHeaderFecha();setInterval(actualizarHeaderFecha,60000);
   const hoy=new Date();
   const ms=document.getElementById('export-csv-mes');if(ms) ms.value=hoy.getMonth()+1;
@@ -4064,6 +4084,9 @@ document.getElementById('fact-drop-zone').addEventListener('drop',e=>{
 </script>
 </body>
 </html>
+
+
+
 
 
 
