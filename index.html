@@ -442,8 +442,8 @@ textarea.form-control{resize:vertical;min-height:70px}
 <!-- OVERLAY DE CARGA SUPABASE -->
 <div id="supabase-loading" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:sans-serif;">
   <div style="font-size:2rem;margin-bottom:20px;">🏊</div>
-  <h2 style="margin:0 0 10px 0;">Sincronizando base de datos...</h2>
-  <p style="color:#aaa;font-size:0.9rem;">Por favor espera, conectando con Supabase</p>
+  <h2 style="margin:0 0 10px 0;">Conectando con Supabase...</h2>
+  <p style="color:#aaa;font-size:0.9rem;">Por favor espera, obteniendo datos en vivo</p>
 </div>
 
 <div id="app">
@@ -1065,32 +1065,8 @@ try {
   console.error("Error inicializando Supabase:", err);
 }
 
-async function syncToSupabase(key, value) {
-  if(!swimmDb) return;
-  try {
-    await swimmDb.from('app_state').upsert({ key: key, value: value });
-  } catch(e) {
-    console.error('Error syncing to Supabase:', e);
-  }
 }
 
-async function loadFromSupabase() {
-  if(!swimmDb) return false;
-      try {
-      const { data, error } = await swimmDb.from('app_state').select('*');
-      if(error) throw error;
-      window.swimmDbConnectionSuccess = true;
-    if(data && data.length > 0) {
-      data.forEach(row => {
-        localStorage.setItem(LS_KEYS[row.key] || `swimm_${row.key}`, JSON.stringify(row.value));
-      });
-      return true;
-    }
-  } catch(e) {
-    console.error('Error loading from Supabase:', e);
-  }
-  return false;
-}
 
 // ----------------------------------------------------------------
 // CAPA DE DATOS
@@ -4150,9 +4126,14 @@ document.getElementById('fact-drop-zone').addEventListener('drop',e=>{
   const loadingOverlay = document.getElementById('supabase-loading');
   if(loadingOverlay) loadingOverlay.style.display = 'flex';
   
-  try { await Promise.race([loadFromSupabase(), new Promise(r => setTimeout(r, 3000))]); } catch(e) {}
+  try { 
+    await DB.getConfig(); 
+    window.swimmDbConnectionSuccess = true;
+  } catch(e) {
+    window.swimmDbConnectionSuccess = false;
+  }
   
-    if(loadingOverlay) loadingOverlay.style.display = 'none';
+  if(loadingOverlay) loadingOverlay.style.display = 'none';
 
   // Actualizar estado de DB
   const dbDot = document.getElementById('db-status-dot');
