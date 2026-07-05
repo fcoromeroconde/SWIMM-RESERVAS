@@ -460,7 +460,6 @@ textarea.form-control{resize:vertical;min-height:70px}
 </head>
 <body>
 <!-- OVERLAY DE CARGA supabaseClient -->
-<div id="debug-log" style="position:fixed;top:0;left:0;width:100%;height:30%;background:rgba(0,0,0,0.8);color:lime;font-family:monospace;z-index:999999;overflow-y:auto;padding:10px;"></div>
 <div id="supabase-loading" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:sans-serif;">
   <div style="font-size:2rem;margin-bottom:20px;">🏊</div>
   <h2 style="margin:0 0 10px 0;">Sincronizando base de datos...</h2>
@@ -1001,8 +1000,6 @@ textarea.form-control{resize:vertical;min-height:70px}
 </div>
 
 <script>
-alert('JS ESTA CORRIENDO');
-window.onerror = function(msg, url, line, col, error) { var o = document.getElementById('supabase-loading'); if(o) o.innerHTML = '<h2 style="color:red">ERROR DE JS</h2><p>' + msg + '</p><p>Line: ' + line + '</p>'; }; window.addEventListener('unhandledrejection', function(event) { var o = document.getElementById('supabase-loading'); if(o) o.innerHTML = '<h2 style="color:red">ERROR PROMISE</h2><p>' + event.reason + '</p>'; });
 
 // ================================================================
 // SWIMM STUDIO v1.1 — Sistema de Reservas
@@ -4010,13 +4007,13 @@ document.getElementById('fact-drop-zone').addEventListener('drop',e=>{
 // ----------------------------------------------------------------
 // BOOTSTRAP
 // ----------------------------------------------------------------
-(async function init(){ console.log('INIT STARTED');
+(async function init(){ 
   const loadingOverlay = document.getElementById('supabase-loading');
   if(loadingOverlay) loadingOverlay.style.display = 'flex';
   
-  console.log('BEFORE RACE'); try { await Promise.race([loadFromSupabase(), new Promise(r => setTimeout(r, 3000))]); } catch(e) {}
+  try { await Promise.race([loadFromSupabase(), new Promise(r => setTimeout(r, 3000))]); } catch(e) {}
   
-  console.log('HIDING OVERLAY'); if(loadingOverlay) loadingOverlay.style.display = 'none';
+  if(loadingOverlay) loadingOverlay.style.display = 'none';
 
   const st=localStorage.getItem('swimm_theme');
   if(st){document.documentElement.setAttribute('data-theme',st);document.getElementById('dark-btn').textContent=st==='dark'?'☀️':'🌙';}
@@ -4035,7 +4032,7 @@ document.getElementById('fact-drop-zone').addEventListener('drop',e=>{
     if(e.key==='ArrowLeft'&&App.moduloActivo==='reservas'&&!App.panelAbierto&&document.activeElement.tagName!=='INPUT') cambiarFecha(-1);
     if(e.key==='ArrowRight'&&App.moduloActivo==='reservas'&&!App.panelAbierto&&document.activeElement.tagName!=='INPUT') cambiarFecha(1);
   });
-  console.log('NAVEGAR A RESERVAS'); navegarA('reservas'); console.log('NAVEGAR DONE');
+  navegarA('reservas');
   actualizarBadges();setInterval(actualizarBadges,30000);
   actualizarBotonesImportExport();
   // First-run PIN setup: show if no PIN configured yet
