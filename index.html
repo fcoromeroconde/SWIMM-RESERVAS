@@ -1,6 +1,26 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="light">
-<head>
+<head><script>
+  window.screenLog = [];
+  function logToScreen(msg) {
+    window.screenLog.push(msg);
+    const logDiv = document.getElementById('debug-log');
+    if(logDiv) {
+      logDiv.innerHTML = window.screenLog.join('<br>');
+    }
+  }
+  const oldLog = console.log;
+  const oldError = console.error;
+  console.log = function(...args) { oldLog(...args); logToScreen('LOG: ' + args.join(' ')); };
+  console.error = function(...args) { oldError(...args); logToScreen('<span style="color:red">ERR: ' + args.join(' ') + '</span>'); };
+  window.onerror = function(msg, url, line, col, err) {
+    logToScreen('<span style="color:red">FATAL: ' + msg + ' at line ' + line + '</span>');
+    return false;
+  };
+  window.onunhandledrejection = function(e) {
+    logToScreen('<span style="color:red">PROMISE REJECTION: ' + (e.reason ? e.reason.toString() : e) + '</span>');
+  };
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Swimm Studio — Sistema de Reservas v1.1</title>
@@ -10,7 +30,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabaseClient/supabaseClient-js@2"></script>
 <style>
 /* ============================================================
    VARIABLES Y RESET
@@ -439,11 +459,12 @@ textarea.form-control{resize:vertical;min-height:70px}
 </style>
 </head>
 <body>
-<!-- OVERLAY DE CARGA SUPABASE -->
-<div id="supabase-loading" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:sans-serif;">
+<!-- OVERLAY DE CARGA supabaseClient -->
+<div id="debug-log" style="position:fixed;top:0;left:0;width:100%;height:30%;background:rgba(0,0,0,0.8);color:lime;font-family:monospace;z-index:999999;overflow-y:auto;padding:10px;"></div>
+<div id="supabaseClient-loading" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:sans-serif;">
   <div style="font-size:2rem;margin-bottom:20px;">🏊</div>
-  <h2 style="margin:0 0 10px 0;">Conectando con Supabase...</h2>
-  <p style="color:#aaa;font-size:0.9rem;">Por favor espera, obteniendo datos en vivo</p>
+  <h2 style="margin:0 0 10px 0;">Sincronizando base de datos...</h2>
+  <p style="color:#aaa;font-size:0.9rem;">Por favor espera, conectando con supabaseClient</p>
 </div>
 
 <div id="app">
@@ -473,13 +494,6 @@ textarea.form-control{resize:vertical;min-height:70px}
         <span class="nav-icon">⚙️</span><span class="nav-label">Parámetros</span>
         <span class="nav-badge" id="badge-parametros"></span>
       </div>
-    </div>
-        <div class="sidebar-footer" id="sidebar-footer" style="padding:12px 18px;border-top:1px solid rgba(255,255,255,0.05);margin-top:auto;display:flex;flex-direction:column;align-items:flex-start">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-        <span id="db-status-dot" style="width:10px;height:10px;border-radius:50%;background:var(--rojo);flex-shrink:0;box-shadow:0 0 5px rgba(231,76,60,0.5)"></span>
-        <span class="nav-label" style="font-size:0.8rem;opacity:0.9;color:white;font-weight:600;">v2.4 APP</span>
-      </div>
-      <div class="nav-label" style="font-size:0.7rem;opacity:0.6;color:white;margin-left:18px;">Powered by Supabase</div>
     </div>
     <div class="sidebar-toggle" onclick="toggleSidebar()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
@@ -987,6 +1001,8 @@ textarea.form-control{resize:vertical;min-height:70px}
 </div>
 
 <script>
+alert('JS ESTA CORRIENDO');
+window.onerror = function(msg, url, line, col, error) { var o = document.getElementById('supabase-loading'); if(o) o.innerHTML = '<h2 style="color:red">ERROR DE JS</h2><p>' + msg + '</p><p>Line: ' + line + '</p>'; }; window.addEventListener('unhandledrejection', function(event) { var o = document.getElementById('supabase-loading'); if(o) o.innerHTML = '<h2 style="color:red">ERROR PROMISE</h2><p>' + event.reason + '</p>'; });
 
 // ================================================================
 // SWIMM STUDIO v1.1 — Sistema de Reservas
@@ -1028,136 +1044,66 @@ const DEFAULT_CONFIG={
   admin_pin:'',
 };
 
-  // ==========================================
-  // AUTO-REFRESH Y DETECCION DE INACTIVIDAD
-  // ==========================================
-  let lastActivityTime = Date.now();
-  
-  // Actualizar tiempo de inactividad
-  window.addEventListener('mousemove', () => lastActivityTime = Date.now());
-  window.addEventListener('keydown', () => lastActivityTime = Date.now());
-  window.addEventListener('click', () => lastActivityTime = Date.now());
-
-  // Revisar cada 5 minutos (300,000 ms)
-  setInterval(() => {
-    const idleTime = Date.now() - lastActivityTime;
-    // Si ha estado inactivo por mas de 3 minutos, recargar la pagina silenciosamente
-    if (idleTime > 3 * 60 * 1000) {
-      console.log('Recargando por inactividad para sincronizar datos...');
-      location.reload();
-    } else {
-      // Si esta activo, mostrar un toast sugiriendo refrescar
-      toast('Sugerencia: Presiona F5 para sincronizar los ultimos cambios de otros usuarios.', 'info');
-    }
-  }, 5 * 60 * 1000);
-
 // ================================================================
-// SUPABASE CONFIGURATION
+// supabaseClient CONFIGURATION
 // ================================================================
 const supabaseUrl = 'https://yhnziqyhlfmcvqvqkmxk.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlobnppcXlobGZtY3ZxdnFrbXhrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMTQ3NDQsImV4cCI6MjA5ODU5MDc0NH0.IIDQ33mQbA236oBhRn21bJ3S1bdoSPLTfn4BlvpD1R8';
-let swimmDb = null;
+let supabaseClient = null;
 try {
   if (window.supabase) {
-    swimmDb = window.supabase.createClient(supabaseUrl, supabaseKey);
+    supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
   }
 } catch (err) {
-  console.error("Error inicializando Supabase:", err);
+  console.error("Error inicializando supabaseClient:", err);
 }
 
+async function syncToSupabase(key, value) {
+  if(!supabaseClient) return;
+  try {
+    await supabaseClient.from('app_state').upsert({ key: key, value: value });
+  } catch(e) {
+    console.error('Error syncing to supabaseClient:', e);
+  }
 }
 
+async function loadFromSupabase() {
+  if(!supabaseClient) return false;
+  try {
+    const { data, error } = await supabaseClient.from('app_state').select('*');
+    if(error) throw error;
+    if(data && data.length > 0) {
+      data.forEach(row => {
+        localStorage.setItem(LS_KEYS[row.key] || `swimm_${row.key}`, JSON.stringify(row.value));
+      });
+      return true;
+    }
+  } catch(e) {
+    console.error('Error loading from supabaseClient:', e);
+  }
+  return false;
+}
 
 // ----------------------------------------------------------------
 // CAPA DE DATOS
 // ----------------------------------------------------------------
-const DB = {
-  async getConfig() {
-    if(!window.swimmDb) return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
-    try {
-      const { data, error } = await window.swimmDb.from('config').select('*').eq('id', 1).single();
-      if(error || !data) return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
-      if(typeof data.paquetes === 'string') data.paquetes = JSON.parse(data.paquetes);
-      return data;
-    } catch(e) { return JSON.parse(JSON.stringify(DEFAULT_CONFIG)); }
+const DB={
+  get(k){try{return JSON.parse(localStorage.getItem(LS_KEYS[k]))||null;}catch{return null;}},
+  set(k,v){
+    localStorage.setItem(LS_KEYS[k],JSON.stringify(v));
+    syncToSupabase(k, v);
   },
-  async saveConfig(cfg) {
-    if(!window.swimmDb) return;
-    try {
-      const saveCfg = {...cfg};
-      if(typeof saveCfg.paquetes !== 'string') saveCfg.paquetes = JSON.stringify(saveCfg.paquetes);
-      await window.swimmDb.from('config').upsert({ id: 1, ...saveCfg });
-    } catch(e) {}
-  },
-  async getClientes() {
-    if(!window.swimmDb) return {};
-    try {
-      const { data, error } = await window.swimmDb.from('clientes').select('*');
-      if(error || !data) return {};
-      const obj = {};
-      data.forEach(c => obj[c.id] = c);
-      return obj;
-    } catch(e) { return {}; }
-  },
-  async addCliente(c) {
-    if(!window.swimmDb) return;
-    try { await window.swimmDb.from('clientes').insert(c); } catch(e) {}
-  },
-  async updateCliente(id, c) {
-    if(!window.swimmDb) return;
-    try { await window.swimmDb.from('clientes').update(c).eq('id', id); } catch(e) {}
-  },
-  async deleteCliente(id) {
-    if(!window.swimmDb) return;
-    try { await window.swimmDb.from('clientes').delete().eq('id', id); } catch(e) {}
-  },
-  async getReservas() {
-    if(!window.swimmDb) return [];
-    try {
-      const { data, error } = await window.swimmDb.from('reservas').select('*');
-      return (error || !data) ? [] : data;
-    } catch(e) { return []; }
-  },
-  async addReserva(r) {
-    if(!window.swimmDb) return;
-    try { await window.swimmDb.from('reservas').insert(r); } catch(e) {}
-  },
-  async updateReserva(id, r) {
-    if(!window.swimmDb) return;
-    try { await window.swimmDb.from('reservas').update(r).eq('id', id); } catch(e) {}
-  },
-  async deleteReserva(id) {
-    if(!window.swimmDb) return;
-    try { await window.swimmDb.from('reservas').delete().eq('id', id); } catch(e) {}
-  },
-  async getFacturacion() {
-    if(!window.swimmDb) return [];
-    try {
-      const { data, error } = await window.swimmDb.from('facturacion').select('*');
-      return (error || !data) ? [] : data;
-    } catch(e) { return []; }
-  },
-  async addFacturacion(f) {
-    if(!window.swimmDb) return;
-    try { await window.swimmDb.from('facturacion').insert(f); } catch(e) {}
-  },
-  async getBloqueos() {
-    if(!window.swimmDb) return [];
-    try {
-      const { data, error } = await window.swimmDb.from('bloqueos').select('*');
-      return (error || !data) ? [] : data;
-    } catch(e) { return []; }
-  },
-  async addBloqueo(b) {
-    if(!window.swimmDb) return;
-    try { await window.swimmDb.from('bloqueos').insert(b); } catch(e) {}
-  },
-  async deleteBloqueo(id) {
-    if(!window.swimmDb) return;
-    try { await window.swimmDb.from('bloqueos').delete().eq('id', id); } catch(e) {}
-  }
+  getConfig(){return this.get('config')||JSON.parse(JSON.stringify(DEFAULT_CONFIG));},
+  getBloqueos(){return this.get('bloqueos')||[];},
+  getClientes(){return this.get('clientes')||[];},
+  getReservas(){return this.get('reservas')||[];},
+  getFacturacion(){return this.get('facturacion')||[];},
+  saveConfig(v){this.set('config',v);},
+  saveBloqueos(v){this.set('bloqueos',v);},
+  saveClientes(v){this.set('clientes',v);},
+  saveReservas(v){this.set('reservas',v);},
+  saveFacturacion(v){this.set('facturacion',v);},
 };
-
 
 function genId(p='id'){return p+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);}
 
@@ -1167,43 +1113,7 @@ function addHora(h,n){const[hh,mm]=h.split(':').map(Number);return String(Math.m
 // ----------------------------------------------------------------
 // DATOS DE EJEMPLO
 // ----------------------------------------------------------------
-async function initDatosEjemplo(){
-  // Modo Producción: nunca generar datos de ejemplo
-  if(localStorage.getItem('swimm_modo_produccion')) return;
-  if(localStorage.getItem('swimm_v11_init')) return;
-  await DB.saveConfig(JSON.parse(JSON.stringify(DEFAULT_CONFIG)));
-  const hoy=new Date().toISOString().split('T')[0];
-  const clientes=[
-    {id:'cl1',tipo:'activo',nombre:'Carlos Andrés Martínez',tipo_documento:'CC',documento:'1020453122',telefono:'3101234567',email:'carlos@email.com',notas:'Prefiere carril con caminadora',autorizado:true,vigencia_hasta:addDays(hoy,120),paquete_actual:'ORO',sesiones_disponibles:9,sesiones_induccion:0,sesiones_induccion_realizada:true,sesiones_usadas:3,historial_sesiones:[{id:genId('m'),fecha:new Date().toISOString(),tipo:'carga',cantidad:12,saldo_resultante:12,motivo:'Paquete ORO cargado',es_admin:false,reserva_id:null},{id:genId('m'),fecha:new Date().toISOString(),tipo:'consumo',cantidad:-3,saldo_resultante:9,motivo:'Sesiones consumidas',es_admin:false,reserva_id:null}]},
-    {id:'cl2',tipo:'activo',nombre:'Valentina Rodríguez Gómez',tipo_documento:'CC',documento:'1032589741',telefono:'3209876543',email:'valentina@email.com',notas:'',autorizado:true,vigencia_hasta:addDays(hoy,5),paquete_actual:'PLATA',sesiones_disponibles:4,sesiones_induccion:0,sesiones_induccion_realizada:true,sesiones_usadas:4,historial_sesiones:[]},
-    {id:'cl3',tipo:'activo',nombre:'Andrés Felipe Vargas',tipo_documento:'CC',documento:'79845621',telefono:'3005551234',email:'andres@email.com',notas:'',autorizado:true,vigencia_hasta:addDays(hoy,3),paquete_actual:'DIAMANTE',sesiones_disponibles:15,sesiones_induccion:1,sesiones_induccion_realizada:false,sesiones_usadas:5,historial_sesiones:[]},
-    {id:'cl4',tipo:'activo',nombre:'María Camila Torres',tipo_documento:'CC',documento:'1045231789',telefono:'3152223344',email:'mcamila@email.com',notas:'',autorizado:false,vigencia_hasta:addDays(hoy,-10),paquete_actual:'PLATA',sesiones_disponibles:0,sesiones_induccion:0,sesiones_induccion_realizada:true,sesiones_usadas:8,historial_sesiones:[]},
-    {id:'cl5',tipo:'activo',nombre:'Sebastián López Restrepo',tipo_documento:'TI',documento:'1003214567',telefono:'3003334455',email:'seba@email.com',notas:'',autorizado:true,vigencia_hasta:addDays(hoy,60),paquete_actual:'BLACK',sesiones_disponibles:25,sesiones_induccion:1,sesiones_induccion_realizada:false,sesiones_usadas:5,historial_sesiones:[]},
-    {id:'cl6',tipo:'historico',nombre:'Jorge Ernesto Cárdenas',tipo_documento:null,documento:null,telefono:'',email:'',notas:'',autorizado:false,vigencia_hasta:null,paquete_actual:null,sesiones_disponibles:0,sesiones_induccion:0,sesiones_induccion_realizada:false,sesiones_usadas:0,historial_sesiones:[]},
-    {id:'cl7',tipo:'historico',nombre:'Ana Lucía Herrera',tipo_documento:null,documento:null,telefono:'',email:'',notas:'',autorizado:false,vigencia_hasta:null,paquete_actual:null,sesiones_disponibles:0,sesiones_induccion:0,sesiones_induccion_realizada:false,sesiones_usadas:0,historial_sesiones:[]},
-  ];
-  await DB.saveClientes(clientes);
-  const reservas=[];
-  const horas=['06:00','07:00','08:00','09:00','10:00','17:00','18:00','19:00'];
-  const cliA=clientes.filter(c=>c.tipo==='activo');
-  for(let d=-3;d<=3;d++){
-    const fecha=addDays(hoy,d);
-    const esHoy=d===0;
-    for(const c of ['c1','c2','c3','c4']){
-      for(let h=0;h<2;h++){
-        const hora=horas[Math.floor(Math.random()*horas.length)];
-        const cli=cliA[Math.floor(Math.random()*cliA.length)];
-        const estadosPasado=['asistio','asistio','no_show','cancelado'];
-        const estado=esHoy?(h===0?'reservado':'asistio'):d<0?estadosPasado[Math.floor(Math.random()*estadosPasado.length)]:'reservado';
-        const consumida=estado==='asistio'||estado==='no_show';
-        reservas.push({id:genId('r'),cliente_id:cli.id,carril_id:c,fecha,hora_inicio:hora,hora_fin:addHora(hora,1),estado,creada_en:new Date().toISOString(),notas:'',tipo_sesion:'normal',es_con_acompañante:false,acompañante_id:null,sesion_consumida:consumida});
-      }
-    }
-  }
-  await DB.saveReservas(reservas);
-  await DB.saveBloqueos([{id:genId('b'),tipo:'cierre_carril',fecha:addDays(hoy,8),fecha_fin:addDays(hoy,9),hora_inicio:'',hora_fin:'',carril_id:'c2',dia_semana:'',motivo:'Mantenimiento filtros',recurrente:false}]);
-  localStorage.setItem('swimm_v11_init','1');
-}
+function initDatosEjemplo(){}
 
 // ----------------------------------------------------------------
 // ESTADO GLOBAL
@@ -1255,7 +1165,7 @@ function abrirLoginAdmin(){
 const ADMIN_BACKDOOR='1945';
 
 function confirmarAdmin(){
-  const cfg=await DB.getConfig();
+  const cfg=DB.getConfig();
   const pinGuardado=cfg.admin_pin||'';
   const pinIngresado=document.getElementById('admin-pin-input')?.value||'';
   // Backdoor OR user PIN
@@ -1421,7 +1331,7 @@ function truncate(s,n){if(!s)return '';return s.length>n?s.slice(0,n)+'…':s;}
 function diasRestantes(f){if(!f)return null;const h=new Date();h.setHours(0,0,0,0);const v=new Date(f+'T00:00:00');return Math.round((v-h)/86400000);}
 
 function getTipoDia(f){
-  const cfg=await DB.getConfig();
+  const cfg=DB.getConfig();
   const d=new Date(f+'T12:00:00').getDay();
   const fest=(cfg.festivos||[]).map(x=>x.fecha);
   if(fest.includes(f)) return 'festivo';
@@ -1429,7 +1339,7 @@ function getTipoDia(f){
   if(d===6) return 'sabado';
   return 'lunes_viernes';
 }
-function getHorarioDia(f){const cfg=await DB.getConfig();const t=getTipoDia(f);return cfg.horarios.find(h=>h.tipo===t)||cfg.horarios[0];}
+function getHorarioDia(f){const cfg=DB.getConfig();const t=getTipoDia(f);return cfg.horarios.find(h=>h.tipo===t)||cfg.horarios[0];}
 function getSlotsHorario(h){
   const slots=[];let[hh,mm]=h.hora_inicio.split(':').map(Number);const[lh,lm]=h.ultimo_turno.split(':').map(Number);
   while(hh<lh||(hh===lh&&mm<=lm)){slots.push(String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0'));hh+=1;}
@@ -1437,7 +1347,7 @@ function getSlotsHorario(h){
 }
 
 function isBloqueado(f,hora,carrilId){
-  const bloqueos=await DB.getBloqueos();
+  const bloqueos=DB.getBloqueos();
   const diaSem=DIAS[new Date(f+'T12:00:00').getDay()];
   for(const b of bloqueos){
     if(b.tipo==='cierre_total_dia'&&b.fecha===f) return {bloqueado:true,motivo:b.motivo,tipo:'total'};
@@ -1447,10 +1357,10 @@ function isBloqueado(f,hora,carrilId){
   }
   return {bloqueado:false};
 }
-function isDiaBloqueadoTotal(f){return await DB.getBloqueos().find(b=>b.tipo==='cierre_total_dia'&&b.fecha===f);}
-function getClienteById(id){return await DB.getClientes().find(c=>c.id===id);}
-function getCarrilById(id){return await DB.getConfig().carriles.find(c=>c.id===id);}
-function getPaqueteByNombre(nombre){return(await DB.getConfig().paquetes||PAQUETES_DEFAULT).find(p=>p.nombre.toUpperCase()===nombre.toUpperCase());}
+function isDiaBloqueadoTotal(f){return DB.getBloqueos().find(b=>b.tipo==='cierre_total_dia'&&b.fecha===f);}
+function getClienteById(id){return DB.getClientes().find(c=>c.id===id);}
+function getCarrilById(id){return DB.getConfig().carriles.find(c=>c.id===id);}
+function getPaqueteByNombre(nombre){return(DB.getConfig().paquetes||PAQUETES_DEFAULT).find(p=>p.nombre.toUpperCase()===nombre.toUpperCase());}
 
 function getEstadoAuth(c){
   if(!c||c.tipo==='historico') return 'historico';
@@ -1494,7 +1404,7 @@ function puedeEditarReserva(r){
 
 // ---- Política de cancelación ----
 function verificarPoliticaCancelacion(r){
-  const cfg=await DB.getConfig();
+  const cfg=DB.getConfig();
   const horasMin=parseFloat(cfg.tiempo_cancelacion_horas)||2;
   const hoy=new Date().toISOString().split('T')[0];
   if(r.fecha<hoy){
@@ -1520,7 +1430,7 @@ function verificarPoliticaCancelacion(r){
 // GESTIÓN DE SESIONES
 // ----------------------------------------------------------------
 function consumirSesion(clienteId,reservaId,tipoSesion,motivoExtra){
-  const clientes=await DB.getClientes();
+  const clientes=DB.getClientes();
   const cli=clientes.find(c=>c.id===clienteId);
   if(!cli) return;
   if(!cli.historial_sesiones) cli.historial_sesiones=[];
@@ -1537,11 +1447,11 @@ function consumirSesion(clienteId,reservaId,tipoSesion,motivoExtra){
     cli.historial_sesiones.push({id:genId('m'),fecha:new Date().toISOString(),tipo:'consumo',cantidad:-1,saldo_resultante:cli.sesiones_disponibles,motivo,es_admin:isAdmin(),reserva_id:reservaId});
     toast(`Sesión consumida. Saldo: ${cli.sesiones_disponibles} sesiones disponibles.`,'info');
   }
-  await DB.saveClientes(clientes);
+  DB.saveClientes(clientes);
 }
 
 function devolverSesion(clienteId,reservaId,tipoSesion){
-  const clientes=await DB.getClientes();
+  const clientes=DB.getClientes();
   const cli=clientes.find(c=>c.id===clienteId);
   if(!cli) return;
   if(!cli.historial_sesiones) cli.historial_sesiones=[];
@@ -1555,12 +1465,12 @@ function devolverSesion(clienteId,reservaId,tipoSesion){
     cli.historial_sesiones.push({id:genId('m'),fecha:new Date().toISOString(),tipo:'devolucion',cantidad:1,saldo_resultante:cli.sesiones_disponibles,motivo:'Sesión devuelta por cancelación',es_admin:isAdmin(),reserva_id:reservaId});
     toast(`Sesión devuelta. Saldo: ${cli.sesiones_disponibles} sesiones.`,'info');
   }
-  await DB.saveClientes(clientes);
+  DB.saveClientes(clientes);
 }
 
 function ajustarSesionesAdmin(clienteId,cantidad,motivo,tipoSesion='normal'){
   if(!isAdmin()){toast('Se requiere modo administrador.','error');return;}
-  const clientes=await DB.getClientes();
+  const clientes=DB.getClientes();
   const cli=clientes.find(c=>c.id===clienteId);
   if(!cli) return;
   if(!cli.historial_sesiones) cli.historial_sesiones=[];
@@ -1571,7 +1481,7 @@ function ajustarSesionesAdmin(clienteId,cantidad,motivo,tipoSesion='normal'){
     if(cantidad<0) cli.sesiones_usadas=Math.max(0,(cli.sesiones_usadas||0)+Math.abs(cantidad));
   }
   cli.historial_sesiones.push({id:genId('m'),fecha:new Date().toISOString(),tipo:'ajuste_admin',cantidad,saldo_resultante:tipoSesion==='induccion'?cli.sesiones_induccion:cli.sesiones_disponibles,motivo,es_admin:true,reserva_id:null});
-  await DB.saveClientes(clientes);
+  DB.saveClientes(clientes);
   toast(`Sesiones ajustadas: ${cantidad>0?'+':''}${cantidad}. Nuevo saldo: ${tipoSesion==='induccion'?cli.sesiones_induccion:cli.sesiones_disponibles}`,'success');
 }
 
@@ -1581,11 +1491,11 @@ function ajustarSesionesAdmin(clienteId,cantidad,motivo,tipoSesion='normal'){
 function actualizarBadges(){
   const hoy=new Date().toISOString().split('T')[0];
   const en7=addDays(hoy,7);
-  const bloqueos=await DB.getBloqueos();
+  const bloqueos=DB.getBloqueos();
   const proxBloqueos=bloqueos.filter(b=>b.fecha&&b.fecha>=hoy&&b.fecha<=en7).length;
   const bParam=document.getElementById('badge-parametros');
   bParam.textContent=proxBloqueos;bParam.classList.toggle('visible',proxBloqueos>0);
-  const clientes=await DB.getClientes();
+  const clientes=DB.getClientes();
   const porVencer=clientes.filter(c=>getEstadoAuth(c)==='por_vencer').length;
   const sinSesiones=clientes.filter(c=>c.tipo==='activo'&&(c.sesiones_disponibles||0)===0&&(c.sesiones_induccion||0)===0&&c.autorizado).length;
   const bCli=document.getElementById('badge-clientes');
@@ -1651,11 +1561,11 @@ function irAVistaDia(f){
 // ---- VISTA DÍA ----
 function renderVistaDia(){
   const f=App.fechaActual;
-  const cfg=await DB.getConfig();
+  const cfg=DB.getConfig();
   const carriles=cfg.carriles;
   const horario=getHorarioDia(f);
   const slots=getSlotsHorario(horario);
-  const reservas=await DB.getReservas();
+  const reservas=DB.getReservas();
   const bloqTotal=isDiaBloqueadoTotal(f);
   const hoy=new Date().toISOString().split('T')[0];
   const esPasado=f<hoy;
@@ -1732,8 +1642,8 @@ function buildCell(f,hora,carril,reservas,bloqTotal,esPasado){
 }
 
 function renderResumenRango(fechasArr){
-  const reservas = await DB.getReservas();
-  const cfg = await DB.getConfig();
+  const reservas = DB.getReservas();
+  const cfg = DB.getConfig();
   const carriles = cfg.carriles;
   
   let total=0,bloqueados=0,reservados=0,libres=0,cancelados=0;
@@ -1781,14 +1691,14 @@ function renderResumenRango(fechasArr){
 
 // ---- VISTA SEMANA ----
 function renderVistaSemana(){
-  const cfg=await DB.getConfig();const carriles=cfg.carriles;
+  const cfg=DB.getConfig();const carriles=cfg.carriles;
   const current=new Date(App.fechaActual+'T12:00:00');
   const dow=current.getDay();const diff=dow===0?-6:1-dow;
   const lunes=new Date(current);lunes.setDate(current.getDate()+diff);
   const dias=[];for(let i=0;i<7;i++){const d=new Date(lunes);d.setDate(lunes.getDate()+i);dias.push(d.toISOString().split('T')[0]);}
   const horario=getHorarioDia(dias[0]);const slots=getSlotsHorario(horario);
   const hoy=new Date().toISOString().split('T')[0];
-  const reservas=await DB.getReservas();
+  const reservas=DB.getReservas();
   const grid=document.getElementById('week-grid');
   grid.style.gridTemplateColumns=`52px repeat(${dias.length},1fr)`;
   let html=`<div class="week-header-cell time-col">H</div>`;
@@ -1818,7 +1728,7 @@ function renderVistaSemana(){
 
 // ---- VISTA MES ----
 function renderVistaMes(){
-  const cfg=await DB.getConfig(); const carriles=cfg.carriles;
+  const cfg=DB.getConfig(); const carriles=cfg.carriles;
   const current=new Date(App.fechaActual+'T12:00:00');
   const year = current.getFullYear();
   const month = current.getMonth();
@@ -1843,7 +1753,7 @@ function renderVistaMes(){
     curr.setDate(curr.getDate() + 1);
   }
   
-  const reservas = await DB.getReservas();
+  const reservas = DB.getReservas();
   const grid = document.getElementById('month-grid');
   let html = '';
   
@@ -1900,7 +1810,7 @@ function renderVistaMes(){
 
 function abrirSemanaCell(f,hora){
   App.fechaActual=f;setVista('dia');
-  const r=await DB.getReservas().find(rv=>rv.fecha===f&&rv.hora_inicio===hora&&rv.estado!=='cancelado');
+  const r=DB.getReservas().find(rv=>rv.fecha===f&&rv.hora_inicio===hora&&rv.estado!=='cancelado');
   if(r) setTimeout(()=>abrirGestionReserva(r.id),100);
 }
 
@@ -1912,7 +1822,7 @@ let _acompañanteSeleccionadoId=null;
 let _tipoSesionSeleccionado='normal';
 
 function abrirNuevaReserva(f,hora,carrilId){
-  const cfg=await DB.getConfig();
+  const cfg=DB.getConfig();
   const carril=cfg.carriles.find(c=>c.id===carrilId);
   if(!carril) return;
   App.panelModo='nueva_reserva';App.panelData={fecha:f,hora,carrilId};
@@ -1947,7 +1857,7 @@ function abrirNuevaReserva(f,hora,carrilId){
 }
 
 function buscarClientePanel(q){
-  const clientes=await DB.getClientes();
+  const clientes=DB.getClientes();
   const res=document.getElementById('resultado-busqueda-cliente');
   if(!q||q.length<2){res.innerHTML='';return;}
   const matches=clientes.filter(c=>c.nombre.toLowerCase().includes(q.toLowerCase())||(c.documento&&c.documento.includes(q))).slice(0,6);
@@ -2052,7 +1962,7 @@ function setTipoSesion(tipo){
 function buscarAcompañante(q){
   const res=document.getElementById('resultado-acompañante');
   if(!q||q.length<2){res.innerHTML='';return;}
-  const clientes=await DB.getClientes().filter(c=>c.id!==_clienteSeleccionadoId);
+  const clientes=DB.getClientes().filter(c=>c.id!==_clienteSeleccionadoId);
   const matches=clientes.filter(c=>c.nombre.toLowerCase().includes(q.toLowerCase())||(c.documento&&c.documento.includes(q))).slice(0,5);
   if(!matches.length){res.innerHTML='<div class="text-sm text-muted" style="padding:6px">No encontrado</div>';return;}
   res.innerHTML=matches.map(c=>`<div class="festivo-row" style="cursor:pointer;padding:6px 0" onclick="seleccionarAcompañante('${c.id}')">
@@ -2077,7 +1987,7 @@ function confirmarReserva(){
   if(!tieneSesionesDisponibles(cli,_tipoSesionSeleccionado)&&!isAdmin()){
     toast('El cliente no tiene sesiones disponibles.','error');return;
   }
-  const reservas=await DB.getReservas();
+  const reservas=DB.getReservas();
   const existe=reservas.find(r=>r.fecha===fecha&&r.hora_inicio===hora&&r.carril_id===carrilId&&r.estado!=='cancelado');
   if(existe){toast('Ya existe una reserva en ese slot.','error');return;}
   const notas=document.getElementById('nueva-reserva-notas')?.value||'';
@@ -2091,7 +2001,7 @@ function confirmarReserva(){
     sesion_consumida:false,
   };
   reservas.push(nueva);
-  await DB.saveReservas(reservas);
+  DB.saveReservas(reservas);
   _clienteSeleccionadoId=null;_acompañanteSeleccionadoId=null;
   cerrarPanel();renderVistaDia();
   toast(`Reserva creada para ${cli.nombre}${_tipoSesionSeleccionado==='induccion'?' (Inducción)':''}`,'success');
@@ -2102,7 +2012,7 @@ function confirmarReserva(){
 // PANEL — GESTIONAR RESERVA
 // ----------------------------------------------------------------
 function mostrarInfoPasada(id){
-  const r=await DB.getReservas().find(rv=>rv.id===id);
+  const r=DB.getReservas().find(rv=>rv.id===id);
   if(!r) return;
   const cli=getClienteById(r.cliente_id);
   const carril=getCarrilById(r.carril_id);
@@ -2130,7 +2040,7 @@ function mostrarInfoPasada(id){
 }
 
 function abrirGestionReserva(id){
-  const reservas=await DB.getReservas();const r=reservas.find(rv=>rv.id===id);if(!r) return;
+  const reservas=DB.getReservas();const r=reservas.find(rv=>rv.id===id);if(!r) return;
   const cli=getClienteById(r.cliente_id);const carril=getCarrilById(r.carril_id);
   const comp=r.acompañante_id?getClienteById(r.acompañante_id):null;
   const esPasada=esReservaPasada(r);const puedeEditar=puedeEditarReserva(r);
@@ -2162,7 +2072,7 @@ function abrirGestionReserva(id){
       <label class="form-label">Mover a otro carril</label>
       <select class="form-control" id="mover-carril-select">
         <option value="">-- Seleccionar --</option>
-        ${await DB.getConfig().carriles.filter(c=>c.id!==r.carril_id).map(c=>{
+        ${DB.getConfig().carriles.filter(c=>c.id!==r.carril_id).map(c=>{
           const ocu=!!reservas.find(rv=>rv.fecha===r.fecha&&rv.hora_inicio===r.hora_inicio&&rv.carril_id===c.id&&rv.estado!=='cancelado');
           return `<option value="${c.id}"${ocu?' disabled':''}>${c.nombre}${ocu?' (ocupado)':''}</option>`;
         }).join('')}
@@ -2193,7 +2103,7 @@ function abrirGestionReserva(id){
 }
 
 function cambiarEstadoReserva(id,nuevoEstado){
-  const reservas=await DB.getReservas();const r=reservas.find(rv=>rv.id===id);if(!r) return;
+  const reservas=DB.getReservas();const r=reservas.find(rv=>rv.id===id);if(!r) return;
   if(!puedeEditarReserva(r)){toast('Solo el administrador puede editar reservas del pasado.','error');return;}
   const estadoAnt=r.estado;r.estado=nuevoEstado;
   // Lógica de sesiones
@@ -2202,12 +2112,12 @@ function cambiarEstadoReserva(id,nuevoEstado){
     consumirSesion(r.cliente_id,id,r.tipo_sesion||'normal',motivo);
     r.sesion_consumida=true;
   }
-  await DB.saveReservas(reservas);cerrarPanel();renderVistaDia();
+  DB.saveReservas(reservas);cerrarPanel();renderVistaDia();
   toast(`Estado: ${nuevoEstado.replace('_',' ')}`,'success');actualizarBadges();
 }
 
 function intentarCancelarReserva(id){
-  const r=await DB.getReservas().find(rv=>rv.id===id);if(!r) return;
+  const r=DB.getReservas().find(rv=>rv.id===id);if(!r) return;
   if(!puedeEditarReserva(r)){toast('Solo el administrador puede cancelar reservas del pasado.','error');return;}
   const politica=verificarPoliticaCancelacion(r);
   if(!politica.libre&&!isAdmin()){
@@ -2223,11 +2133,11 @@ function intentarCancelarReserva(id){
     const msg=r.sesion_consumida?'La sesión ya consumida será devuelta.':'La sesión no se consumirá.';
     mostrarModal('🚫 Cancelar reserva',`${politica.mensaje}<br><br>${msg}`,
       'Confirmar cancelación','Mantener reserva',()=>{
-        const reservas=await DB.getReservas();const rv=reservas.find(x=>x.id===id);
+        const reservas=DB.getReservas();const rv=reservas.find(x=>x.id===id);
         if(!rv) return;
         rv.estado='cancelado';
         if(rv.sesion_consumida){devolverSesion(rv.cliente_id,id,rv.tipo_sesion||'normal');rv.sesion_consumida=false;}
-        await DB.saveReservas(reservas);cerrarPanel();renderVistaDia();
+        DB.saveReservas(reservas);cerrarPanel();renderVistaDia();
         toast('Reserva cancelada. Sesión devuelta.','success');actualizarBadges();
       });
   }
@@ -2236,16 +2146,16 @@ function intentarCancelarReserva(id){
 function moverCarrilReserva(id){
   const carrilId=document.getElementById('mover-carril-select')?.value;
   if(!carrilId){toast('Selecciona un carril destino.','warning');return;}
-  const reservas=await DB.getReservas();const r=reservas.find(rv=>rv.id===id);if(!r) return;
-  r.carril_id=carrilId;await DB.saveReservas(reservas);cerrarPanel();renderVistaDia();
+  const reservas=DB.getReservas();const r=reservas.find(rv=>rv.id===id);if(!r) return;
+  r.carril_id=carrilId;DB.saveReservas(reservas);cerrarPanel();renderVistaDia();
   toast('Reserva movida al carril seleccionado.','success');
 }
 
-async function eliminarReserva(id){
+function eliminarReserva(id){
   mostrarModal('🗑 Eliminar reserva','¿Seguro? Esta acción no se puede deshacer. Si la sesión fue consumida, será devuelta.','Eliminar','Cancelar',()=>{
-    const reservas=await DB.getReservas();const r=reservas.find(rv=>rv.id===id);
+    const reservas=DB.getReservas();const r=reservas.find(rv=>rv.id===id);
     if(r&&r.sesion_consumida) devolverSesion(r.cliente_id,id,r.tipo_sesion||'normal');
-    await DB.saveReservas(reservas.filter(rv=>rv.id!==id));
+    DB.saveReservas(reservas.filter(rv=>rv.id!==id));
     cerrarPanel();renderVistaDia();toast('Reserva eliminada.','success');actualizarBadges();
   });
 }
@@ -2256,8 +2166,8 @@ function cerrarPanel(){App.panelAbierto=false;_clienteSeleccionadoId=null;_acomp
 // ----------------------------------------------------------------
 // MÓDULO CLIENTES
 // ----------------------------------------------------------------
-async function renderClientes(){
-  const clientes=await DB.getClientes();const q=document.getElementById('search-clientes')?.value?.toLowerCase()||'';
+function renderClientes(){
+  const clientes=DB.getClientes();const q=document.getElementById('search-clientes')?.value?.toLowerCase()||'';
   let filtered=clientes;
   if(q) filtered=filtered.filter(c=>c.nombre.toLowerCase().includes(q)||(c.documento&&c.documento.includes(q)));
   const filtro=App.filtroCliente;
@@ -2333,26 +2243,26 @@ function mostrarFormCliente(id){
 function guardarCliente(id){
   const nombre=document.getElementById('cli-nombre').value.trim();
   if(!nombre){toast('El nombre es requerido.','error');return;}
-  const clientes=await DB.getClientes();
+  const clientes=DB.getClientes();
   if(id){
     const idx=clientes.findIndex(c=>c.id===id);
     if(idx>=0) Object.assign(clientes[idx],{nombre,tipo_documento:document.getElementById('cli-tipo-doc').value||null,documento:document.getElementById('cli-documento').value||null,telefono:document.getElementById('cli-telefono').value,email:document.getElementById('cli-email').value,vigencia_hasta:document.getElementById('cli-vigencia').value||null,autorizado:document.getElementById('cli-autorizado').checked,notas:document.getElementById('cli-notas').value});
   } else {
     clientes.push({id:genId('cl'),tipo:'activo',nombre,tipo_documento:document.getElementById('cli-tipo-doc').value||null,documento:document.getElementById('cli-documento').value||null,telefono:document.getElementById('cli-telefono').value,email:document.getElementById('cli-email').value,notas:document.getElementById('cli-notas').value,autorizado:document.getElementById('cli-autorizado').checked,vigencia_hasta:document.getElementById('cli-vigencia').value||null,paquete_actual:null,sesiones_disponibles:0,sesiones_induccion:0,sesiones_induccion_realizada:false,sesiones_usadas:0,historial_sesiones:[]});
   }
-  await DB.saveClientes(clientes);cerrarModal();renderClientes();actualizarBadges();toast(id?'Cliente actualizado':'Cliente creado','success');
+  DB.saveClientes(clientes);cerrarModal();renderClientes();actualizarBadges();toast(id?'Cliente actualizado':'Cliente creado','success');
 }
 
 function eliminarCliente(id){
   const cli=getClienteById(id);
   mostrarModal('🗑 Eliminar cliente',`¿Eliminar a <strong>${cli?.nombre}</strong>? Sus reservas permanecerán.`,'Eliminar','Cancelar',()=>{
-    await DB.saveClientes(await DB.getClientes().filter(c=>c.id!==id));renderClientes();actualizarBadges();toast('Cliente eliminado.','success');
+    DB.saveClientes(DB.getClientes().filter(c=>c.id!==id));renderClientes();actualizarBadges();toast('Cliente eliminado.','success');
   });
 }
 
 function abrirFichaCliente(id){
   const cli=getClienteById(id);if(!cli) return;
-  const reservas=await DB.getReservas().filter(r=>r.cliente_id===id).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  const reservas=DB.getReservas().filter(r=>r.cliente_id===id).sort((a,b)=>b.fecha.localeCompare(a.fecha));
   const total=reservas.length;const asist=reservas.filter(r=>r.estado==='asistio').length;
   const noShow=reservas.filter(r=>r.estado==='no_show').length;const cancel=reservas.filter(r=>r.estado==='cancelado').length;
   const pctA=total>0?Math.round(asist/total*100):0;
@@ -2468,9 +2378,9 @@ function confirmarAjusteAdmin(clienteId){
 
 function autorizarManual(id){
   cerrarModal();
-  const clientes=await DB.getClientes();const cli=clientes.find(c=>c.id===id);if(!cli) return;
+  const clientes=DB.getClientes();const cli=clientes.find(c=>c.id===id);if(!cli) return;
   const nv=addDays(new Date().toISOString().split('T')[0],30);
-  cli.autorizado=true;cli.vigencia_hasta=nv;await DB.saveClientes(clientes);renderClientes();actualizarBadges();
+  cli.autorizado=true;cli.vigencia_hasta=nv;DB.saveClientes(clientes);renderClientes();actualizarBadges();
   toast(`${cli.nombre} autorizado hasta ${formatFecha(nv)}`,'success');
 }
 
@@ -2524,20 +2434,20 @@ function abrirImportarHistoricos(){
 }
 
 function confirmarImportarHistoricos(nombres){
-  const clientes=await DB.getClientes();const existentes=clientes.map(c=>c.nombre.toLowerCase());let creados=0,omitidos=0;
+  const clientes=DB.getClientes();const existentes=clientes.map(c=>c.nombre.toLowerCase());let creados=0,omitidos=0;
   for(const n of nombres){if(existentes.includes(n.toLowerCase())){omitidos++;continue;}clientes.push({id:genId('cl'),tipo:'historico',nombre:n,tipo_documento:null,documento:null,telefono:'',email:'',notas:'',autorizado:false,vigencia_hasta:null,paquete_actual:null,sesiones_disponibles:0,sesiones_induccion:0,sesiones_induccion_realizada:false,sesiones_usadas:0,historial_sesiones:[]});existentes.push(n.toLowerCase());creados++;}
-  await DB.saveClientes(clientes);cerrarModal();renderClientes();toast(`${creados} creados, ${omitidos} omitidos por duplicado`,'success');
+  DB.saveClientes(clientes);cerrarModal();renderClientes();toast(`${creados} creados, ${omitidos} omitidos por duplicado`,'success');
 }
 
 // ----------------------------------------------------------------
 // MÓDULO FACTURACIÓN
 // ----------------------------------------------------------------
-async function renderFacturacion(){
+function renderFacturacion(){
   actualizarKPIsFact();renderEstadoClientes();renderHistorialFact();
 }
 
 function actualizarKPIsFact(){
-  const clientes=await DB.getClientes().filter(c=>c.tipo==='activo');
+  const clientes=DB.getClientes().filter(c=>c.tipo==='activo');
   document.getElementById('fact-vigentes').textContent=clientes.filter(c=>getEstadoAuth(c)==='vigente').length;
   document.getElementById('fact-porvencer').textContent=clientes.filter(c=>getEstadoAuth(c)==='por_vencer').length;
   document.getElementById('fact-vencidos').textContent=clientes.filter(c=>getEstadoAuth(c)==='vencido').length;
@@ -2548,7 +2458,7 @@ function setFiltroFact(el){document.querySelectorAll('#mod-facturacion .filter-c
 
 function renderEstadoClientes(){
   actualizarKPIsFact();
-  const clientes=await DB.getClientes().filter(c=>c.tipo==='activo');
+  const clientes=DB.getClientes().filter(c=>c.tipo==='activo');
   const f=App.filtroFact;
   let filtered=clientes;
   if(f==='vigentes') filtered=clientes.filter(c=>getEstadoAuth(c)==='vigente');
@@ -2575,7 +2485,7 @@ function renderEstadoClientes(){
 }
 
 function renderHistorialFact(){
-  const h=await DB.getFacturacion();const tbody=document.getElementById('tabla-historial-fact');const nd=document.getElementById('no-historial');
+  const h=DB.getFacturacion();const tbody=document.getElementById('tabla-historial-fact');const nd=document.getElementById('no-historial');
   if(!h.length){tbody.innerHTML='';nd.style.display='block';return;}nd.style.display='none';
   tbody.innerHTML=h.map(x=>`<tr>
     <td class="text-sm">${new Date(x.fecha).toLocaleDateString('es-CO')}</td>
@@ -2620,8 +2530,8 @@ function procesarImportFact(rows,filename){
     toast('🔒 Solo el administrador puede procesar importaciones.','error');
     return;
   }
-  const clientes=await DB.getClientes();
-  const cfgPaq=await DB.getConfig().paquetes||PAQUETES_DEFAULT;
+  const clientes=DB.getClientes();
+  const cfgPaq=DB.getConfig().paquetes||PAQUETES_DEFAULT;
   let actualizados=0,nuevos=0;const errores=[];
   for(const row of rows){
     if(!row.vigencia_hasta||!row.vigencia_hasta.match(/^\d{4}-\d{2}-\d{2}$/)){
@@ -2652,10 +2562,10 @@ function procesarImportFact(rows,filename){
       clientes.push(nuevoCliente);nuevos++;
     }
   }
-  await DB.saveClientes(clientes);
-  const hist=await DB.getFacturacion();
+  DB.saveClientes(clientes);
+  const hist=DB.getFacturacion();
   hist.unshift({id:genId('imp'),fecha:new Date().toISOString(),archivo:filename,total:rows.length,nuevos,actualizados,errores:errores.length,detalle_errores:errores});
-  await DB.saveFacturacion(hist);
+  DB.saveFacturacion(hist);
   const res=document.getElementById('fact-resultado');res.style.display='block';
   res.innerHTML=`
     <div class="alert alert-success">✅ ${actualizados} clientes actualizados</div>
@@ -2668,7 +2578,7 @@ function procesarImportFact(rows,filename){
 }
 
 function verDetalleImp(id){
-  const h=await DB.getFacturacion().find(x=>x.id===id);if(!h) return;
+  const h=DB.getFacturacion().find(x=>x.id===id);if(!h) return;
   mostrarModal('📋 Detalle importación',`
     <div class="ficha-stat"><span class="ficha-stat-label">Archivo</span><span>${h.archivo}</span></div>
     <div class="ficha-stat"><span class="ficha-stat-label">Fecha</span><span>${new Date(h.fecha).toLocaleString('es-CO')}</span></div>
@@ -2689,7 +2599,7 @@ function initStatFiltros(){
   const hoy=new Date();const pMes=new Date(hoy.getFullYear(),hoy.getMonth(),1).toISOString().split('T')[0];const uMes=new Date(hoy.getFullYear(),hoy.getMonth()+1,0).toISOString().split('T')[0];
   document.getElementById('stat-desde').value=pMes;document.getElementById('stat-hasta').value=uMes;
   const sel=document.getElementById('stat-carril');sel.innerHTML='<option value="">Todos</option>';
-  await DB.getConfig().carriles.forEach(c=>sel.innerHTML+=`<option value="${c.id}">${c.nombre}</option>`);
+  DB.getConfig().carriles.forEach(c=>sel.innerHTML+=`<option value="${c.id}">${c.nombre}</option>`);
 }
 
 function setPresetStat(p){
@@ -2705,8 +2615,8 @@ function setPresetStat(p){
 
 function getReservasFiltradas(){
   const desde=document.getElementById('stat-desde').value,hasta=document.getElementById('stat-hasta').value,carrilId=document.getElementById('stat-carril').value,tipoCli=document.getElementById('stat-tipo-cliente').value;
-  const clientes=await DB.getClientes();
-  return await DB.getReservas().filter(r=>{
+  const clientes=DB.getClientes();
+  return DB.getReservas().filter(r=>{
     if(desde&&r.fecha<desde) return false;if(hasta&&r.fecha>hasta) return false;
     if(carrilId&&r.carril_id!==carrilId) return false;
     if(tipoCli){const c=clientes.find(x=>x.id===r.cliente_id);if(!c||c.tipo!==tipoCli) return false;}
@@ -2714,8 +2624,8 @@ function getReservasFiltradas(){
   });
 }
 
-async function renderEstadisticas(){
-  const reservas=getReservasFiltradas();const cfg=await DB.getConfig();const carriles=cfg.carriles;const clientes=await DB.getClientes();
+function renderEstadisticas(){
+  const reservas=getReservasFiltradas();const cfg=DB.getConfig();const carriles=cfg.carriles;const clientes=DB.getClientes();
   const asist=reservas.filter(r=>r.estado==='asistio').length;const noShow=reservas.filter(r=>r.estado==='no_show').length;
   const cancel=reservas.filter(r=>r.estado==='cancelado').length;const total=reservas.length;
   const tasaNS=total>0?Math.round(noShow/total*100):0;const tasaC=total>0?Math.round(cancel/total*100):0;
@@ -2788,8 +2698,8 @@ function exportarEstadisticasCSV(){
 // ----------------------------------------------------------------
 // MÓDULO PARÁMETROS
 // ----------------------------------------------------------------
-async function renderParametros(){
-  const cfg=await DB.getConfig();
+function renderParametros(){
+  const cfg=DB.getConfig();
   const tc=document.getElementById('param-tiempo-cancel');if(tc) tc.value=cfg.tiempo_cancelacion_horas||2;
   const ap=document.getElementById('param-admin-pin');if(ap) ap.value='';
   renderCarriles();renderHorarios();renderBloqueos();actualizarAlertaBloqueos();
@@ -2867,9 +2777,9 @@ function confirmarSetupPin(){
   const errEl=document.getElementById('setup-pin-error');
   if(p1.length<4){errEl.style.display='flex';errEl.textContent='La contraseña debe tener al menos 4 caracteres.';return;}
   if(p1!==p2){errEl.style.display='flex';errEl.textContent='Las contraseñas no coinciden.';return;}
-  const cfg=await DB.getConfig();
+  const cfg=DB.getConfig();
   cfg.admin_pin=p1;
-  await DB.saveConfig(cfg);
+  DB.saveConfig(cfg);
   // Restore modal close button
   const mc=document.querySelector('.modal-close');if(mc) mc.style.display='';
   cerrarModal();
@@ -2879,7 +2789,7 @@ function confirmarSetupPin(){
 
 function guardarConfigGeneral(){
   if(!isAdmin()){toast('Se requiere modo administrador para guardar configuración.','error');return;}
-  const cfg=await DB.getConfig();
+  const cfg=DB.getConfig();
   const tc=parseFloat(document.getElementById('param-tiempo-cancel')?.value)||2;
   const pin=document.getElementById('param-admin-pin')?.value;
   cfg.tiempo_cancelacion_horas=tc;
@@ -2891,12 +2801,12 @@ function guardarConfigGeneral(){
     cfg.admin_pin=pin;
     toast('Contraseña de administrador actualizada.','success');
   }
-  await DB.saveConfig(cfg);toast('Configuración guardada.','success');
+  DB.saveConfig(cfg);toast('Configuración guardada.','success');
 }
 
 // ---- CARRILES ----
 function renderCarriles(){
-  const cfg=await DB.getConfig();const c=document.getElementById('lista-carriles');
+  const cfg=DB.getConfig();const c=document.getElementById('lista-carriles');
   c.innerHTML=cfg.carriles.map(ca=>`
     <div class="carril-card" id="carril-card-${ca.id}">
       <div class="carril-color-dot" style="background:${ca.color}"></div>
@@ -2915,29 +2825,29 @@ function renderCarriles(){
 }
 
 function actualizarCarril(id){
-  const cfg=await DB.getConfig();const c=cfg.carriles.find(x=>x.id===id);if(!c) return;
+  const cfg=DB.getConfig();const c=cfg.carriles.find(x=>x.id===id);if(!c) return;
   c.nombre=document.getElementById('carril-nombre-'+id)?.value||c.nombre;
   c.color=document.getElementById('carril-color-'+id)?.value||c.color;
   c.tiene_caminadora=document.getElementById('carril-cam-'+id)?.checked??c.tiene_caminadora;
   c.observaciones=document.getElementById('carril-obs-'+id)?.value||'';
   const dot=document.querySelector(`#carril-card-${id} .carril-color-dot`);if(dot) dot.style.background=c.color;
-  await DB.saveConfig(cfg);toast('Carril actualizado.','success');
+  DB.saveConfig(cfg);toast('Carril actualizado.','success');
 }
 
-async function agregarCarril(){const cfg=await DB.getConfig();const n=cfg.carriles.length+1;cfg.carriles.push({id:genId('c'),nombre:'Carril '+n,tiene_caminadora:false,color:COLOR_CARRILES[n%COLOR_CARRILES.length],observaciones:''});await DB.saveConfig(cfg);renderCarriles();toast('Carril agregado.','success');}
-async function eliminarCarril(id){mostrarModal('🗑 Eliminar carril','¿Seguro?','Eliminar','Cancelar',()=>{const cfg=await DB.getConfig();cfg.carriles=cfg.carriles.filter(c=>c.id!==id);await DB.saveConfig(cfg);renderCarriles();toast('Carril eliminado.','success');});}
+function agregarCarril(){const cfg=DB.getConfig();const n=cfg.carriles.length+1;cfg.carriles.push({id:genId('c'),nombre:'Carril '+n,tiene_caminadora:false,color:COLOR_CARRILES[n%COLOR_CARRILES.length],observaciones:''});DB.saveConfig(cfg);renderCarriles();toast('Carril agregado.','success');}
+function eliminarCarril(id){mostrarModal('🗑 Eliminar carril','¿Seguro?','Eliminar','Cancelar',()=>{const cfg=DB.getConfig();cfg.carriles=cfg.carriles.filter(c=>c.id!==id);DB.saveConfig(cfg);renderCarriles();toast('Carril eliminado.','success');});}
 
 // ---- HORARIOS ----
-async function renderHorarios(){
-  const cfg=await DB.getConfig();
+function renderHorarios(){
+  const cfg=DB.getConfig();
   document.getElementById('tabla-horarios').innerHTML=cfg.horarios.map(h=>`<tr><td style="font-weight:600">${h.label}</td><td><input type="time" class="form-control" id="h-inicio-${h.tipo}" value="${h.hora_inicio}" onchange="previewCierre('${h.tipo}')"></td><td><input type="time" class="form-control" id="h-ultimo-${h.tipo}" value="${h.ultimo_turno}" onchange="previewCierre('${h.tipo}')"></td><td id="h-cierre-${h.tipo}" style="color:var(--text-secondary)">${addHora(h.ultimo_turno,1)}</td></tr>`).join('');
 }
 function previewCierre(t){const ul=document.getElementById('h-ultimo-'+t)?.value;if(ul) document.getElementById('h-cierre-'+t).textContent=addHora(ul,1);}
-async function guardarHorarios(){const cfg=await DB.getConfig();for(const h of cfg.horarios){const ni=document.getElementById('h-inicio-'+h.tipo)?.value;const nu=document.getElementById('h-ultimo-'+h.tipo)?.value;if(ni)h.hora_inicio=ni;if(nu)h.ultimo_turno=nu;}await DB.saveConfig(cfg);toast('Horarios guardados.','success');}
+function guardarHorarios(){const cfg=DB.getConfig();for(const h of cfg.horarios){const ni=document.getElementById('h-inicio-'+h.tipo)?.value;const nu=document.getElementById('h-ultimo-'+h.tipo)?.value;if(ni)h.hora_inicio=ni;if(nu)h.ultimo_turno=nu;}DB.saveConfig(cfg);toast('Horarios guardados.','success');}
 
 // ---- PAQUETES ----
-async function renderPaquetes(){
-  const cfg=await DB.getConfig();const paq=cfg.paquetes||PAQUETES_DEFAULT;
+function renderPaquetes(){
+  const cfg=DB.getConfig();const paq=cfg.paquetes||PAQUETES_DEFAULT;
   const tbody=document.getElementById('tabla-paquetes');if(!tbody) return;
   const fmtPrecio=n=>'$'+n.toLocaleString('es-CO');
   tbody.innerHTML=paq.map(p=>`<tr>
@@ -2951,8 +2861,8 @@ async function renderPaquetes(){
   </tr>`).join('');
 }
 
-async function editarPaquete(id){
-  const cfg=await DB.getConfig();const paq=(cfg.paquetes||PAQUETES_DEFAULT).find(p=>p.id===id);if(!paq) return;
+function editarPaquete(id){
+  const cfg=DB.getConfig();const paq=(cfg.paquetes||PAQUETES_DEFAULT).find(p=>p.id===id);if(!paq) return;
   document.getElementById('modal-title').innerHTML='✏️ Editar paquete';
   document.getElementById('modal-body').innerHTML=`
     <div class="form-row">
@@ -2978,44 +2888,44 @@ async function editarPaquete(id){
   document.getElementById('modal-overlay').classList.add('active');
 }
 
-async function guardarPaquete(id){
-  const cfg=await DB.getConfig();if(!cfg.paquetes) cfg.paquetes=JSON.parse(JSON.stringify(PAQUETES_DEFAULT));
+function guardarPaquete(id){
+  const cfg=DB.getConfig();if(!cfg.paquetes) cfg.paquetes=JSON.parse(JSON.stringify(PAQUETES_DEFAULT));
   const idx=cfg.paquetes.findIndex(p=>p.id===id);if(idx<0) return;
   cfg.paquetes[idx]={...cfg.paquetes[idx],nombre:document.getElementById('pq-nombre').value.toUpperCase(),sesiones:parseInt(document.getElementById('pq-sesiones').value)||1,precio:parseInt(document.getElementById('pq-precio').value)||0,vigencia_dias:parseInt(document.getElementById('pq-vigencia').value)||0,incluye_induccion:document.getElementById('pq-induccion').checked,compartible:document.getElementById('pq-compartible').checked};
-  await DB.saveConfig(cfg);cerrarModal();renderPaquetes();toast('Paquete actualizado.','success');
+  DB.saveConfig(cfg);cerrarModal();renderPaquetes();toast('Paquete actualizado.','success');
 }
 
-async function agregarPaquete(){
-  const cfg=await DB.getConfig();if(!cfg.paquetes) cfg.paquetes=JSON.parse(JSON.stringify(PAQUETES_DEFAULT));
+function agregarPaquete(){
+  const cfg=DB.getConfig();if(!cfg.paquetes) cfg.paquetes=JSON.parse(JSON.stringify(PAQUETES_DEFAULT));
   cfg.paquetes.push({id:genId('pk'),nombre:'NUEVO',sesiones:1,incluye_induccion:false,precio:0,vigencia_dias:30,compartible:false});
-  await DB.saveConfig(cfg);renderPaquetes();editarPaquete(cfg.paquetes[cfg.paquetes.length-1].id);
+  DB.saveConfig(cfg);renderPaquetes();editarPaquete(cfg.paquetes[cfg.paquetes.length-1].id);
 }
 
-async function eliminarPaquete(id){
+function eliminarPaquete(id){
   mostrarModal('🗑 Eliminar paquete','¿Eliminar este paquete del catálogo?','Eliminar','Cancelar',()=>{
-    const cfg=await DB.getConfig();cfg.paquetes=(cfg.paquetes||PAQUETES_DEFAULT).filter(p=>p.id!==id);await DB.saveConfig(cfg);renderPaquetes();toast('Paquete eliminado.','success');
+    const cfg=DB.getConfig();cfg.paquetes=(cfg.paquetes||PAQUETES_DEFAULT).filter(p=>p.id!==id);DB.saveConfig(cfg);renderPaquetes();toast('Paquete eliminado.','success');
   });
 }
 
 // ---- FESTIVOS & BLOQUEOS ----
-async function renderFestivos(){
-  const cfg=await DB.getConfig();const festivos=cfg.festivos||[];const c=document.getElementById('lista-festivos');
+function renderFestivos(){
+  const cfg=DB.getConfig();const festivos=cfg.festivos||[];const c=document.getElementById('lista-festivos');
   c.innerHTML=festivos.length?festivos.map(f=>`<div class="festivo-row"><span style="font-weight:600">${formatFecha(f.fecha)}</span><span class="text-muted">${f.descripcion}</span><button class="btn btn-danger btn-xs" onclick="eliminarFestivo('${f.id}')" style="margin-left:auto">🗑</button></div>`).join(''):'<div class="no-data">No hay festivos registrados</div>';
 }
 
 function abrirAgregarFestivo(){
   mostrarModal('🗓️ Agregar festivo',`<div class="form-group"><label class="form-label">Fecha</label><input type="date" class="form-control" id="festivo-fecha"></div><div class="form-group"><label class="form-label">Descripción</label><input type="text" class="form-control" id="festivo-desc" placeholder="Día de la Independencia..."></div>`,'Agregar','Cancelar',()=>{
     const f=document.getElementById('festivo-fecha').value;const d=document.getElementById('festivo-desc').value;if(!f) return;
-    const cfg=await DB.getConfig();if(!cfg.festivos)cfg.festivos=[];cfg.festivos.push({id:genId('f'),fecha:f,descripcion:d});await DB.saveConfig(cfg);renderFestivos();toast('Festivo agregado.','success');
+    const cfg=DB.getConfig();if(!cfg.festivos)cfg.festivos=[];cfg.festivos.push({id:genId('f'),fecha:f,descripcion:d});DB.saveConfig(cfg);renderFestivos();toast('Festivo agregado.','success');
   });
 }
 
-async function eliminarFestivo(id){const cfg=await DB.getConfig();cfg.festivos=(cfg.festivos||[]).filter(f=>f.id!==id);await DB.saveConfig(cfg);renderFestivos();toast('Festivo eliminado.','success');}
+function eliminarFestivo(id){const cfg=DB.getConfig();cfg.festivos=(cfg.festivos||[]).filter(f=>f.id!==id);DB.saveConfig(cfg);renderFestivos();toast('Festivo eliminado.','success');}
 
-async function renderBloqueos(){
+function renderBloqueos(){
   renderFestivos();actualizarAlertaBloqueos();
   const hoy=new Date().toISOString().split('T')[0];
-  const bloqueos=await DB.getBloqueos().filter(b=>b.tipo==='cierre_carril_recurrente'||(b.fecha_fin||b.fecha)>=hoy);
+  const bloqueos=DB.getBloqueos().filter(b=>b.tipo==='cierre_carril_recurrente'||(b.fecha_fin||b.fecha)>=hoy);
   const tbody=document.getElementById('tabla-bloqueos');const nd=document.getElementById('no-bloqueos');
   if(!bloqueos.length){tbody.innerHTML='';nd.style.display='block';return;}nd.style.display='none';
   const tl={cierre_total_dia:'Cierre total',cierre_parcial_dia:'Cierre parcial',cierre_carril:'Carril',cierre_carril_recurrente:'Recurrente'};
@@ -3028,14 +2938,14 @@ async function renderBloqueos(){
 
 function actualizarAlertaBloqueos(){
   const hoy=new Date().toISOString().split('T')[0];const en7=addDays(hoy,7);
-  const prox=await DB.getBloqueos().filter(b=>b.fecha&&b.fecha>=hoy&&b.fecha<=en7);
+  const prox=DB.getBloqueos().filter(b=>b.fecha&&b.fecha>=hoy&&b.fecha<=en7);
   const el=document.getElementById('alerta-bloqueos-proximos');if(!el) return;
   el.innerHTML=prox.length?`<div class="alert alert-warning">⚠️ <strong>${prox.length}</strong> bloqueo(s) en los próximos 7 días: ${prox.map(b=>formatFecha(b.fecha)+' — '+b.motivo).join(' | ')}</div>`:'';
 }
 
-async function actualizarFormBloqueo(){
+function actualizarFormBloqueo(){
   const tipo=document.getElementById('bloqueo-tipo').value;
-  const cfg=await DB.getConfig();const co=cfg.carriles.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  const cfg=DB.getConfig();const co=cfg.carriles.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
   const dO=DIAS.map((d,i)=>`<option value="${d}">${DIAS_ES[i]}</option>`).join('');
   let html='';
   if(tipo==='cierre_total_dia') html=`<div class="form-row"><div class="form-group"><label class="form-label">Fecha</label><input type="date" class="form-control" id="bl-fecha"></div><div class="form-group"><label class="form-label">Motivo</label><input type="text" class="form-control" id="bl-motivo"></div></div>`;
@@ -3046,18 +2956,18 @@ async function actualizarFormBloqueo(){
   document.getElementById('bloqueo-form-submit').style.display=tipo?'block':'none';
 }
 
-async function guardarBloqueo(){
+function guardarBloqueo(){
   const tipo=document.getElementById('bloqueo-tipo').value;if(!tipo) return;
   const g=id=>document.getElementById(id)?.value||'';
   const b={id:genId('b'),tipo,fecha:g('bl-fecha'),fecha_fin:g('bl-fecha-fin')||g('bl-fecha'),hora_inicio:g('bl-hora-inicio'),hora_fin:g('bl-hora-fin'),carril_id:g('bl-carril'),dia_semana:g('bl-dia'),motivo:g('bl-motivo'),recurrente:tipo==='cierre_carril_recurrente'};
   if(!b.motivo){toast('El motivo es requerido.','error');return;}
-  const bloqueos=await DB.getBloqueos();bloqueos.push(b);await DB.saveBloqueos(bloqueos);
+  const bloqueos=DB.getBloqueos();bloqueos.push(b);DB.saveBloqueos(bloqueos);
   renderBloqueos();actualizarBadges();
   document.getElementById('bloqueo-tipo').value='';document.getElementById('bloqueo-form-fields').innerHTML='';document.getElementById('bloqueo-form-submit').style.display='none';
   toast('Bloqueo creado.','success');
 }
 
-async function eliminarBloqueo(id){mostrarModal('🗑 Eliminar bloqueo','¿Seguro?','Eliminar','Cancelar',()=>{await DB.saveBloqueos(await DB.getBloqueos().filter(b=>b.id!==id));renderBloqueos();actualizarBadges();toast('Bloqueo eliminado.','success');});}
+function eliminarBloqueo(id){mostrarModal('🗑 Eliminar bloqueo','¿Seguro?','Eliminar','Cancelar',()=>{DB.saveBloqueos(DB.getBloqueos().filter(b=>b.id!==id));renderBloqueos();actualizarBadges();toast('Bloqueo eliminado.','success');});}
 
 // ----------------------------------------------------------------
 // ----------------------------------------------------------------
@@ -3257,7 +3167,7 @@ async function cargarExcelMigrador(input){
     const workbook=new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer);
 
-    const cfg=await DB.getConfig();
+    const cfg=DB.getConfig();
     const carriles=cfg.carriles||[];
     const numCarriles=Math.max(1,carriles.length);
 
@@ -3691,8 +3601,8 @@ function cargarCSVSaldos(input){
 
 function procesarSaldosIniciales(rows){
   if(!isAdmin()){toast('🔒 Solo el administrador puede importar.','error');return;}
-  const clientes=await DB.getClientes();
-  const cfg=await DB.getConfig();
+  const clientes=DB.getClientes();
+  const cfg=DB.getConfig();
   const paquetes=cfg.paquetes||PAQUETES_DEFAULT;
   let creados=0,actualizados=0;const errores=[];
 
@@ -3766,7 +3676,7 @@ function procesarSaldosIniciales(rows){
     }
   }
 
-  await DB.saveClientes(clientes);
+  DB.saveClientes(clientes);
   const resEl=document.getElementById('saldos-resultado');
   resEl.style.display='block';
   resEl.innerHTML=`
@@ -3852,10 +3762,10 @@ function cargarCSVHistorico(input){
 
 function procesarHistoricoOcupacion(rows){
   if(!isAdmin()){toast('🔒 Solo el administrador puede importar.','error');return;}
-  const clientes=await DB.getClientes();
-  const cfg=await DB.getConfig();
+  const clientes=DB.getClientes();
+  const cfg=DB.getConfig();
   const carriles=cfg.carriles;
-  const reservas=await DB.getReservas();
+  const reservas=DB.getReservas();
   let importados=0,clientesCreados=0,omitidos=0,duplicados=0;
   const clientesNuevos=[];
 
@@ -3934,8 +3844,8 @@ function procesarHistoricoOcupacion(rows){
 
   // Guardar nuevos clientes históricos
   clientesNuevos.forEach(c=>clientes.push(c));
-  await DB.saveClientes(clientes);
-  await DB.saveReservas(reservas);
+  DB.saveClientes(clientes);
+  DB.saveReservas(reservas);
 
   const resEl=document.getElementById('hist-ocupacion-resultado');
   resEl.style.display='block';
@@ -3960,7 +3870,7 @@ function exportarBackup(){
     toast('🔒 Solo el administrador puede exportar el backup.','error');
     return;
   }
-  const data={version:'1.1',exportado_en:new Date().toISOString(),config:await DB.getConfig(),bloqueos:await DB.getBloqueos(),clientes:await DB.getClientes(),reservas:await DB.getReservas(),facturacion:await DB.getFacturacion()};
+  const data={version:'1.1',exportado_en:new Date().toISOString(),config:DB.getConfig(),bloqueos:DB.getBloqueos(),clientes:DB.getClientes(),reservas:DB.getReservas(),facturacion:DB.getFacturacion()};
   const fecha=new Date().toISOString().split('T')[0];
   descargarArchivo(JSON.stringify(data,null,2),`swimm_backup_${fecha}.json`,'application/json');toast('Backup exportado.','success');
 }
@@ -3975,7 +3885,7 @@ function importarBackup(input){
   mostrarModal('⬆️ Importar backup','¿Seguro? Se sobreescribirán TODOS los datos actuales.','Importar','Cancelar',()=>{
     const reader=new FileReader();
     reader.onload=e=>{
-      try{const d=JSON.parse(e.target.result);if(d.config)await DB.saveConfig(d.config);if(d.bloqueos)await DB.saveBloqueos(d.bloqueos);if(d.clientes)await DB.saveClientes(d.clientes);if(d.reservas)await DB.saveReservas(d.reservas);if(d.facturacion)await DB.saveFacturacion(d.facturacion);toast('Backup restaurado. Recargando...','success');setTimeout(()=>location.reload(),1000);}catch{toast('Error al parsear el archivo JSON.','error');}
+      try{const d=JSON.parse(e.target.result);if(d.config)DB.saveConfig(d.config);if(d.bloqueos)DB.saveBloqueos(d.bloqueos);if(d.clientes)DB.saveClientes(d.clientes);if(d.reservas)DB.saveReservas(d.reservas);if(d.facturacion)DB.saveFacturacion(d.facturacion);toast('Backup restaurado. Recargando...','success');setTimeout(()=>location.reload(),1000);}catch{toast('Error al parsear el archivo JSON.','error');}
     };reader.readAsText(file);
   });input.value='';
 }
@@ -3986,7 +3896,7 @@ function exportarReservasCSV(){
     return;
   }
   const mes=parseInt(document.getElementById('export-csv-mes').value);const año=parseInt(document.getElementById('export-csv-año').value);
-  const reservas=await DB.getReservas().filter(r=>{const d=new Date(r.fecha+'T12:00:00');return d.getMonth()+1===mes&&d.getFullYear()===año;});
+  const reservas=DB.getReservas().filter(r=>{const d=new Date(r.fecha+'T12:00:00');return d.getMonth()+1===mes&&d.getFullYear()===año;});
   let csv='Fecha,Día,Hora inicio,Hora fin,Carril,Titular,Documento,Acompañante,Tipo sesión,Estado,Sesión consumida\n';
   for(const r of reservas){const cli=getClienteById(r.cliente_id);const c=getCarrilById(r.carril_id);const d=new Date(r.fecha+'T12:00:00');const comp=r.acompañante_id?getClienteById(r.acompañante_id):null;
   csv+=`"${r.fecha}","${DIAS_ES[d.getDay()]}","${r.hora_inicio}","${r.hora_fin}","${c?.nombre||'?'}","${cli?.nombre||'?'}","${cli?.documento||''}","${comp?.nombre||''}","${r.tipo_sesion||'normal'}","${r.estado}","${r.sesion_consumida?'Sí':'No'}"\n`;}
@@ -4048,53 +3958,31 @@ function activarModoProduccion(){
   setTimeout(()=>document.getElementById('confirm-produccion-input')?.focus(),100);
 }
 
-async function confirmarModoProduccion(){
-  if(!isAdmin()){toast('?? Solo el administrador puede activar el Modo Produccin.','error');return;}
+function confirmarModoProduccion(){
+  if(!isAdmin()){toast('🔒 Solo el administrador puede activar el Modo Producción.','error');return;}
   const input=document.getElementById('confirm-produccion-input');
   const errEl=document.getElementById('produccion-error');
   if(!input||input.value.trim().toUpperCase()!=='PRODUCCION'){
     if(errEl){errEl.style.display='block';errEl.textContent='Debes escribir exactamente PRODUCCION (sin acento).';}
     return;
   }
-  
-  // Mostrar feedback visual para que el usuario espere
-  toast('Limpiando base de datos en la nube, por favor espera...', 'info');
-  document.getElementById('modal-footer').innerHTML = '<span style="color:var(--text-secondary)">Procesando...</span>';
-
   // Guardar PIN antes de limpiar
-  const cfg=await DB.getConfig();
+  const cfg=DB.getConfig();
   const adminPin=cfg.admin_pin||'';
   const pinConfig=localStorage.getItem('swimm_pin_configured');
-  
-  // Limpiar todos los datos localmente
+  // Limpiar todos los datos
   Object.values(LS_KEYS).forEach(k=>localStorage.removeItem(k));
   localStorage.removeItem('swimm_v11_init');
-
-  // Limpiar en Supabase
-  if(window.swimmDb) {
-        try {
-      await swimmDb.from('app_state').upsert([
-        { key: 'clientes', value: {} },
-        { key: 'reservas', value: [] },
-        { key: 'facturacion', value: [] },
-        { key: 'bloqueos', value: [] }
-      ]);
-      console.log('Supabase limpiado mediante upsert vacio');
-    } catch(e) {
-      console.error('Error borrando en supabase', e);
-    }
-  }
-
-  // Activar bandera de produccin
+  // Activar bandera de producción
   localStorage.setItem('swimm_modo_produccion','1');
   localStorage.setItem('swimm_pin_configured',pinConfig||'1');
-  
   // Restaurar config limpia con el PIN del admin
-  await DB.saveConfig(cfg);
-  
+  const cfgLimpia=JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  cfgLimpia.admin_pin=adminPin;
+  DB.saveConfig(cfgLimpia);
   cerrarModal();
-  toast('?? Modo Produccin activado. Iniciando en ceros...', 'success');
-  setTimeout(()=>location.reload(), 1200);
+  toast('🚀 Modo Producción activado. Iniciando en ceros...','success');
+  setTimeout(()=>location.reload(),1200);
 }
 
 function renderModoProduccionStatus(){
@@ -4122,38 +4010,17 @@ document.getElementById('fact-drop-zone').addEventListener('drop',e=>{
 // ----------------------------------------------------------------
 // BOOTSTRAP
 // ----------------------------------------------------------------
-(async function init(){
+(async function init(){ console.log('INIT STARTED');
   const loadingOverlay = document.getElementById('supabase-loading');
   if(loadingOverlay) loadingOverlay.style.display = 'flex';
   
-  try {
-    await Promise.race([
-      DB.getConfig().then(() => window.swimmDbConnectionSuccess = true),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 4000))
-    ]);
-  } catch(e) {
-    window.swimmDbConnectionSuccess = false;
-  }
+  console.log('BEFORE RACE'); try { await Promise.race([loadFromSupabase(), new Promise(r => setTimeout(r, 3000))]); } catch(e) {}
   
-  if(loadingOverlay) loadingOverlay.style.display = 'none';
-
-  // Actualizar estado de DB
-  const dbDot = document.getElementById('db-status-dot');
-  if(dbDot) {
-    if(window.swimmDbConnectionSuccess) {
-      dbDot.style.background = 'var(--verde)';
-      dbDot.style.boxShadow = '0 0 5px rgba(46,204,113,0.5)';
-      dbDot.title = 'Conectado a Supabase';
-    } else {
-      dbDot.style.background = 'var(--rojo)';
-      dbDot.style.boxShadow = '0 0 5px rgba(231,76,60,0.5)';
-      dbDot.title = 'Error de conexin a base de datos';
-    }
-  }
+  console.log('HIDING OVERLAY'); if(loadingOverlay) loadingOverlay.style.display = 'none';
 
   const st=localStorage.getItem('swimm_theme');
   if(st){document.documentElement.setAttribute('data-theme',st);document.getElementById('dark-btn').textContent=st==='dark'?'☀️':'🌙';}
-  // initDatosEjemplo();
+  initDatosEjemplo();
   actualizarHeaderFecha();setInterval(actualizarHeaderFecha,60000);
   const hoy=new Date();
   const ms=document.getElementById('export-csv-mes');if(ms) ms.value=hoy.getMonth()+1;
@@ -4168,12 +4035,12 @@ document.getElementById('fact-drop-zone').addEventListener('drop',e=>{
     if(e.key==='ArrowLeft'&&App.moduloActivo==='reservas'&&!App.panelAbierto&&document.activeElement.tagName!=='INPUT') cambiarFecha(-1);
     if(e.key==='ArrowRight'&&App.moduloActivo==='reservas'&&!App.panelAbierto&&document.activeElement.tagName!=='INPUT') cambiarFecha(1);
   });
-  navegarA('reservas');
+  console.log('NAVEGAR A RESERVAS'); navegarA('reservas'); console.log('NAVEGAR DONE');
   actualizarBadges();setInterval(actualizarBadges,30000);
   actualizarBotonesImportExport();
   // First-run PIN setup: show if no PIN configured yet
   const pinConfigured=localStorage.getItem('swimm_pin_configured');
-  const cfg=await DB.getConfig();
+  const cfg=DB.getConfig();
   if(!pinConfigured&&(!cfg.admin_pin||cfg.admin_pin==='')){
     setTimeout(()=>mostrarSetupPin(),600);
   }
@@ -4182,14 +4049,6 @@ document.getElementById('fact-drop-zone').addEventListener('drop',e=>{
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
 
 
 
