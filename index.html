@@ -4126,9 +4126,11 @@ document.getElementById('fact-drop-zone').addEventListener('drop',e=>{
   const loadingOverlay = document.getElementById('supabase-loading');
   if(loadingOverlay) loadingOverlay.style.display = 'flex';
   
-  try { 
-    await DB.getConfig(); 
-    window.swimmDbConnectionSuccess = true;
+  try {
+    await Promise.race([
+      DB.getConfig().then(() => window.swimmDbConnectionSuccess = true),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 4000))
+    ]);
   } catch(e) {
     window.swimmDbConnectionSuccess = false;
   }
