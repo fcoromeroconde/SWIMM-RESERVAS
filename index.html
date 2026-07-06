@@ -882,7 +882,8 @@ textarea.form-control{resize:vertical;min-height:70px}
 
           <!-- ===== MIGRADOR EXCEL ===== -->
           <div class="card" style="margin-bottom:20px;border:1.5px solid rgba(99,102,241,0.4);background:linear-gradient(135deg,rgba(99,102,241,0.07),rgba(99,102,241,0.02))">
-            <div class="card-title" style="color:#818cf8">🪄 Migrador de Excel Histórico</div>
+            <div class="card-title" style="color:#818cf8; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="const b=document.getElementById('body-migrador'); const i=document.getElementById('icon-migrador'); if(b.style.display==='none'){b.style.display='block'; i.textContent='▼';}else{b.style.display='none'; i.textContent='▶';}"><div>🪄 Migrador de Excel Histórico</div><div id="icon-migrador" style="font-size:0.8rem">▼</div></div>
+            <div id="body-migrador">
             <div class="alert alert-info" style="margin-bottom:16px">
               <span>ℹ️</span>
               <div>
@@ -921,12 +922,14 @@ textarea.form-control{resize:vertical;min-height:70px}
             </div>
             <div id="migrador-preview" style="display:none"></div>
             <div id="migrador-resultado" style="display:none;margin-top:14px"></div>
+            </div>
           </div>
           <!-- ===== FIN MIGRADOR EXCEL ===== -->
 
           <!-- Saldos Iniciales -->
           <div class="card" style="margin-bottom:20px">
-            <div class="card-title">📋 Saldos Iniciales — Clientes y Sesiones</div>
+            <div class="card-title" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="const b=document.getElementById('body-saldos'); const i=document.getElementById('icon-saldos'); if(b.style.display==='none'){b.style.display='block'; i.textContent='▼';}else{b.style.display='none'; i.textContent='▶';}"><div>📋 Saldos Iniciales — Clientes y Sesiones</div><div id="icon-saldos" style="font-size:0.8rem">▼</div></div>
+            <div id="body-saldos">
             <div class="alert alert-info" style="margin-bottom:14px">
               <span>ℹ️</span>
               <div>
@@ -944,11 +947,13 @@ textarea.form-control{resize:vertical;min-height:70px}
             </div>
             <div id="saldos-preview" style="display:none"></div>
             <div id="saldos-resultado" style="display:none;margin-top:14px"></div>
+            </div>
           </div>
 
           <!-- Histórico de Ocupación -->
           <div class="card">
-            <div class="card-title">📊 Histórico de Ocupación — Para Estadísticas</div>
+            <div class="card-title" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="const b=document.getElementById('body-hist'); const i=document.getElementById('icon-hist'); if(b.style.display==='none'){b.style.display='block'; i.textContent='▼';}else{b.style.display='none'; i.textContent='▶';}"><div>📊 Histórico de Ocupación — Para Estadísticas</div><div id="icon-hist" style="font-size:0.8rem">▼</div></div>
+            <div id="body-hist">
             <div class="alert alert-info" style="margin-bottom:14px">
               <span>ℹ️</span>
               <div>
@@ -966,6 +971,7 @@ textarea.form-control{resize:vertical;min-height:70px}
             </div>
             <div id="hist-ocupacion-preview" style="display:none"></div>
             <div id="hist-ocupacion-resultado" style="display:none;margin-top:14px"></div>
+            </div>
           </div>
 
         </div>
