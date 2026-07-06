@@ -1068,6 +1068,18 @@ try {
 async function syncToSupabase(key, value) {
   if(!supabaseClient) return;
   try {
+    if (key === 'reservas' && Array.isArray(value)) {
+      const CHUNK_SIZE = 2000;
+      const numChunks = Math.ceil(value.length / CHUNK_SIZE);
+      await supabaseClient.from('app_state').upsert({ key: 'reservas_meta', value: { chunks: numChunks } });
+      
+      for (let i = 0; i < numChunks; i++) {
+        const chunk = value.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+        await supabaseClient.from('app_state').upsert({ key: `reservas_chunk_${i}`, value: chunk });
+      }
+      return;
+    }
+    
     await supabaseClient.from('app_state').upsert({ key: key, value: value });
   } catch(e) {
     console.error('Error syncing to supabaseClient:', e);
@@ -1080,10 +1092,22 @@ async function loadFromSupabase() {
     const { data, error } = await supabaseClient.from('app_state').select('*');
     if(error) throw error;
     if(data && data.length > 0) {
+      let reservasChunks = [];
+      let numReservasChunks = 0;
+
       data.forEach(row => {
         if (typeof InMemoryDB !== 'undefined') {
-          InMemoryDB[row.key] = row.value;
+          if (row.key === 'reservas_meta') {
+            numReservasChunks = row.value.chunks || 0;
+          } else if (row.key.startsWith('reservas_chunk_')) {
+            const index = parseInt(row.key.replace('reservas_chunk_', ''));
+            reservasChunks[index] = row.value;
+          } else {
+            // Regular key, or the old monolithic 'reservas' row (which will be overwritten if chunks exist)
+            InMemoryDB[row.key] = row.value;
+          }
         }
+        
         // Solo guardamos en localStorage lo liviano
         if (row.key === 'config' || row.key === 'bloqueos') {
           try {
@@ -1091,6 +1115,18 @@ async function loadFromSupabase() {
           } catch(e) {}
         }
       });
+
+      // Reassemble reservas if chunks were found
+      if (numReservasChunks > 0 && typeof InMemoryDB !== 'undefined') {
+        let allReservas = [];
+        for(let i = 0; i < numReservasChunks; i++) {
+          if (reservasChunks[i]) {
+            allReservas = allReservas.concat(reservasChunks[i]);
+          }
+        }
+        InMemoryDB['reservas'] = allReservas;
+      }
+
       return true;
     }
   } catch(e) {
