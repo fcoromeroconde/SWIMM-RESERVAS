@@ -499,8 +499,8 @@ textarea.form-control{resize:vertical;min-height:70px}
       <span class="nav-label" style="font-size:0.78rem">Colapsar</span>
     </div>
     <div class="sidebar-footer" style="padding: 12px 18px; border-top: 1px solid rgba(255,255,255,0.05); overflow: hidden; display: flex; align-items: center; gap: 10px; cursor: default;">
-      <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:#10b981;flex-shrink:0;box-shadow: 0 0 6px #10b981" title="Supabase Conectado"></span>
-      <span class="nav-label" style="font-size:0.75rem;color:rgba(255,255,255,0.4);white-space:nowrap;font-weight:600">v1.1 - Online</span>
+      <span id="supa-status-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:#10b981;flex-shrink:0;box-shadow: 0 0 6px #10b981" title="Supabase Conectado"></span>
+      <span id="supa-status-txt" class="nav-label" style="font-size:0.75rem;color:rgba(255,255,255,0.4);white-space:nowrap;font-weight:600">v1.1 - Online</span>
     </div>
   </nav>
 
@@ -1065,8 +1065,35 @@ try {
   console.error("Error inicializando supabaseClient:", err);
 }
 
+let pendingSyncs = 0;
+function updateSyncUI() {
+  const dot = document.getElementById('supa-status-dot');
+  const txt = document.getElementById('supa-status-txt');
+  if(!dot || !txt) return;
+  if(pendingSyncs > 0) {
+    dot.style.backgroundColor = '#f59e0b';
+    dot.style.boxShadow = '0 0 6px #f59e0b';
+    txt.textContent = 'Sincronizando...';
+    txt.style.color = '#f59e0b';
+  } else {
+    dot.style.backgroundColor = '#10b981';
+    dot.style.boxShadow = '0 0 6px #10b981';
+    txt.textContent = 'v1.1 - Online';
+    txt.style.color = 'rgba(255,255,255,0.4)';
+  }
+}
+
+window.addEventListener('beforeunload', (e) => {
+  if(pendingSyncs > 0) {
+    e.preventDefault();
+    e.returnValue = 'Sincronización en progreso. Si cierras ahora podrías perder datos. ¿Estás seguro?';
+  }
+});
+
 async function syncToSupabase(key, value) {
   if(!supabaseClient) return;
+  pendingSyncs++;
+  updateSyncUI();
   try {
     if (key === 'reservas' && Array.isArray(value)) {
       const CHUNK_SIZE = 2000;
@@ -1077,13 +1104,14 @@ async function syncToSupabase(key, value) {
         const chunk = value.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
         await supabaseClient.from('app_state').upsert({ key: `reservas_chunk_${i}`, value: chunk });
       }
-      return;
+    } else {
+      await supabaseClient.from('app_state').upsert({ key: key, value: value });
     }
-    
-    await supabaseClient.from('app_state').upsert({ key: key, value: value });
   } catch(e) {
     console.error('Error syncing to supabaseClient:', e);
   }
+  pendingSyncs--;
+  updateSyncUI();
 }
 
 async function loadFromSupabase() {
@@ -2700,7 +2728,7 @@ function renderEstadisticas(){
   const asist=reservas.filter(r=>r.estado==='asistio').length;const noShow=reservas.filter(r=>r.estado==='no_show').length;
   const cancel=reservas.filter(r=>r.estado==='cancelado').length;const total=reservas.length;
   const tasaNS=total>0?Math.round(noShow/total*100):0;const tasaC=total>0?Math.round(cancel/total*100):0;
-  const cliMap={};reservas.filter(r=>r.estado==='asistio').forEach(r=>{cliMap[r.cliente_id]=(cliMap[r.cliente_id]||0)+1;});
+  const cliMap={};reservas.filter(r=>r.estado==='asistio' && r.cliente_id && r.cliente_id !== 'null').forEach(r=>{cliMap[r.cliente_id]=(cliMap[r.cliente_id]||0)+1;});
   const topCli=Object.entries(cliMap).sort((a,b)=>b[1]-a[1])[0];
   const topCliN=topCli?(getClienteById(topCli[0])?.nombre||'?'):'—';
   const horaMap={};reservas.forEach(r=>{horaMap[r.hora_inicio]=(horaMap[r.hora_inicio]||0)+1;});
@@ -3886,11 +3914,19 @@ function procesarHistoricoOcupacion(rows){
     const carril=resolverCarril(row.carril);
     if(!carril){omitidos++;continue;}
 
+    const cli=resolverCliente(row.cliente);
+
     // Detectar duplicado: misma fecha+hora+carril ya existente
     const existe=reservas.find(r=>r.fecha===row.fecha&&r.hora_inicio===row.hora&&r.carril_id===carril.id&&r.estado!=='cancelado');
-    if(existe){duplicados++;continue;}
+    if(existe){
+      // REPARAR HUÉRFANOS: Si la reserva existe, pero su cliente se perdió (es huérfano), lo re-asignamos
+      if(cli && (!existe.cliente_id || !getClienteById(existe.cliente_id))) {
+        existe.cliente_id = cli.id;
+      }
+      duplicados++;
+      continue;
+    }
 
-    const cli=resolverCliente(row.cliente);
     const estado=['asistio','no_show','cancelado','reservado'].includes(row.estado)?row.estado:'asistio';
     const tipoSes=row.tipo_sesion==='induccion'?'induccion':'normal';
     const consumida=estado==='asistio'||estado==='no_show';
