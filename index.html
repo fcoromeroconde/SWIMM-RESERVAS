@@ -498,6 +498,10 @@ textarea.form-control{resize:vertical;min-height:70px}
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
       <span class="nav-label" style="font-size:0.78rem">Colapsar</span>
     </div>
+    <div class="sidebar-footer" style="padding: 12px 18px; border-top: 1px solid rgba(255,255,255,0.05); overflow: hidden; display: flex; align-items: center; gap: 10px; cursor: default;">
+      <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:#10b981;flex-shrink:0;box-shadow: 0 0 6px #10b981" title="Supabase Conectado"></span>
+      <span class="nav-label" style="font-size:0.75rem;color:rgba(255,255,255,0.4);white-space:nowrap;font-weight:600">v1.1 - Online</span>
+    </div>
   </nav>
 
   <div id="main-area">
@@ -1077,7 +1081,15 @@ async function loadFromSupabase() {
     if(error) throw error;
     if(data && data.length > 0) {
       data.forEach(row => {
-        localStorage.setItem(LS_KEYS[row.key] || `swimm_${row.key}`, JSON.stringify(row.value));
+        if (typeof InMemoryDB !== 'undefined') {
+          InMemoryDB[row.key] = row.value;
+        }
+        // Solo guardamos en localStorage lo liviano
+        if (row.key === 'config' || row.key === 'bloqueos') {
+          try {
+            localStorage.setItem(LS_KEYS[row.key] || `swimm_${row.key}`, JSON.stringify(row.value));
+          } catch(e) {}
+        }
       });
       return true;
     }
