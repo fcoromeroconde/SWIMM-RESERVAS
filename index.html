@@ -23,7 +23,7 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Swimm Studio — Sistema de Reservas v1.1</title>
+<title>Swimm Studio — Sistema de Reservas v2.1</title>
 <meta name="description" content="Sistema de reservas para carriles de natación Swimm Studio. Gestión de clientes, sesiones, facturación y estadísticas.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -500,7 +500,7 @@ textarea.form-control{resize:vertical;min-height:70px}
     </div>
     <div class="sidebar-footer" style="padding: 12px 18px; border-top: 1px solid rgba(255,255,255,0.05); overflow: hidden; display: flex; align-items: center; gap: 10px; cursor: default;">
       <span id="supa-status-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:#10b981;flex-shrink:0;box-shadow: 0 0 6px #10b981" title="Supabase Conectado"></span>
-      <span id="supa-status-txt" class="nav-label" style="font-size:0.75rem;color:rgba(255,255,255,0.4);white-space:nowrap;font-weight:600">v1.1 - Online</span>
+      <span id="supa-status-txt" class="nav-label" style="font-size:0.75rem;color:rgba(255,255,255,0.4);white-space:nowrap;font-weight:600">v2.1 - Online</span>
     </div>
   </nav>
 
@@ -569,41 +569,77 @@ textarea.form-control{resize:vertical;min-height:70px}
       <section class="module" id="mod-clientes">
         <div class="module-header">
           <div>
-            <div class="module-title">👤 Clientes</div>
-            <div class="module-subtitle">Gestión de clientes activos, históricos y saldos de sesiones</div>
+            <div class="module-title">👤 Clientes y Nadadores</div>
+            <div class="module-subtitle">Gestión de clientes, nadadores, vigencias y autorizaciones</div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn btn-secondary btn-sm" id="btn-importar-historicos" onclick="abrirImportarHistoricos()">📥 Importar históricos CSV</button>
-            <button class="btn btn-primary btn-sm" onclick="abrirNuevoCliente()">➕ Nuevo cliente</button>
+            <button class="btn btn-primary btn-sm" id="btn-cli-nuevo" onclick="abrirNuevoCliente()">➕ Nuevo cliente</button>
+            <button class="btn btn-purple btn-sm" id="btn-nad-nuevo" onclick="abrirFormNadador()" style="display:none">➕ Nuevo nadador</button>
           </div>
         </div>
-        <div class="filters-bar">
-          <div class="search-wrap">
-            <span class="search-icon">🔍</span>
-            <input type="text" class="form-control" id="search-clientes" placeholder="Buscar por nombre o documento..." oninput="filtrarClientes()">
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <span class="filter-chip active" data-filter="todos" onclick="setFiltroCliente(this)">Todos</span>
-            <span class="filter-chip" data-filter="activos" onclick="setFiltroCliente(this)">Activos</span>
-            <span class="filter-chip" data-filter="historicos" onclick="setFiltroCliente(this)">Históricos</span>
-            <span class="filter-chip" data-filter="con_sesiones" onclick="setFiltroCliente(this)">Con sesiones</span>
-            <span class="filter-chip" data-filter="sin_sesiones" onclick="setFiltroCliente(this)">Sin sesiones</span>
-            <span class="filter-chip" data-filter="por_vencer" onclick="setFiltroCliente(this)">Por vencer</span>
-            <span class="filter-chip" data-filter="vencidos" onclick="setFiltroCliente(this)">Vencidos</span>
-          </div>
+        
+        <div class="tabs" id="tabs-clientes-submod" style="margin-bottom: 14px;">
+          <div class="tab active" id="btn-submod-clientes" onclick="switchSubmodClientes('clientes')">👥 Clientes Titulares</div>
+          <div class="tab" id="btn-submod-nadadores" onclick="switchSubmodClientes('nadadores')">🏊 Nadadores</div>
         </div>
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Nombre</th><th>Documento</th><th>Paquete</th>
-                <th>Sesiones</th><th>Vigencia</th><th>Estado</th><th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="tabla-clientes"></tbody>
-          </table>
+
+        <div id="container-clientes">
+          <div class="filters-bar">
+            <div class="search-wrap">
+              <span class="search-icon">🔍</span>
+              <input type="text" class="form-control" id="search-clientes" placeholder="Buscar por nombre o documento..." oninput="filtrarClientes()">
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span class="filter-chip active" data-filter="todos" onclick="setFiltroCliente(this)">Todos</span>
+              <span class="filter-chip" data-filter="activos" onclick="setFiltroCliente(this)">Activos</span>
+              <span class="filter-chip" data-filter="pre_clientes" onclick="setFiltroCliente(this)">Pre-Clientes</span>
+              <span class="filter-chip" data-filter="historicos" onclick="setFiltroCliente(this)">Históricos</span>
+              <span class="filter-chip" data-filter="con_sesiones" onclick="setFiltroCliente(this)">Con sesiones</span>
+              <span class="filter-chip" data-filter="sin_sesiones" onclick="setFiltroCliente(this)">Sin sesiones</span>
+              <span class="filter-chip" data-filter="por_vencer" onclick="setFiltroCliente(this)">Por vencer</span>
+              <span class="filter-chip" data-filter="vencidos" onclick="setFiltroCliente(this)">Vencidos</span>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th><th>Documento</th><th>Paquete</th>
+                  <th>Sesiones</th><th>Vigencia</th><th>Estado</th><th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tabla-clientes"></tbody>
+            </table>
+          </div>
+          <div id="no-clientes" class="no-data" style="display:none">No se encontraron clientes.</div>
         </div>
-        <div id="no-clientes" class="no-data" style="display:none">No se encontraron clientes.</div>
+
+        <div id="container-nadadores" style="display:none">
+          <div class="filters-bar">
+            <div class="search-wrap">
+              <span class="search-icon">🔍</span>
+              <input type="text" class="form-control" id="search-nadadores" placeholder="Buscar por nombre o documento..." oninput="filtrarNadadores()">
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span class="filter-chip active" id="f-nad-todos" onclick="setFiltroNadador('todos')">Todos</span>
+              <span class="filter-chip" id="f-nad-adultos" onclick="setFiltroNadador('adultos')">Adultos</span>
+              <span class="filter-chip" id="f-nad-menores" onclick="setFiltroNadador('menores')">Menores de Edad</span>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th><th>Documento</th><th>Edad / Menor</th>
+                  <th>Nada Desde</th><th>Género</th><th>Asociaciones</th><th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tabla-nadadores"></tbody>
+            </table>
+          </div>
+          <div id="no-nadadores" class="no-data" style="display:none">No se encontraron nadadores.</div>
+        </div>
       </section>
 
       <!-- ===== MÓDULO FACTURACIÓN ===== -->
@@ -743,6 +779,32 @@ textarea.form-control{resize:vertical;min-height:70px}
           <div class="tab" onclick="switchTab('param','bloqueos',this)">🔧 Festivos y Bloqueos</div>
           <div class="tab" onclick="switchTab('param','backup',this)">💾 Backup</div>
           <div class="tab" onclick="switchTab('param','importaciones',this)">📥 Importaciones</div>
+          <div class="tab" onclick="switchTab('param','auditoria',this)">📋 Auditoría</div>
+        </div>
+
+        <div class="tab-content" id="param-auditoria">
+          <div class="card">
+            <div class="card-title">📋 Registro de Auditoría de Operaciones (v2.1)</div>
+            <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+              <input type="text" class="form-control" id="buscar-auditoria-input" placeholder="Filtrar por acción o detalle..." oninput="renderAuditoria()" style="flex:1">
+              <button class="btn btn-secondary btn-sm" onclick="exportarAuditoriaCSV()">📥 Exportar CSV</button>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th style="width:170px">Fecha/Hora</th>
+                    <th style="width:100px">Usuario</th>
+                    <th style="width:180px">Acción</th>
+                    <th>Detalles</th>
+                  </tr>
+                </thead>
+                <tbody id="tabla-auditoria">
+                  <tr><td colspan="4" class="no-data">Cargando registros...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         <div class="tab-content active" id="param-carriles">
@@ -1012,7 +1074,7 @@ textarea.form-control{resize:vertical;min-height:70px}
 <script>
 
 // ================================================================
-// SWIMM STUDIO v1.1 — Sistema de Reservas
+// SWIMM STUDIO v2.1 — Sistema de Reservas
 // ================================================================
 
 // ----------------------------------------------------------------
@@ -1078,7 +1140,7 @@ function updateSyncUI() {
   } else {
     dot.style.backgroundColor = '#10b981';
     dot.style.boxShadow = '0 0 6px #10b981';
-    txt.textContent = 'v1.1 - Online';
+    txt.textContent = 'v2.1 - Online';
     txt.style.color = 'rgba(255,255,255,0.4)';
   }
 }
@@ -1090,19 +1152,23 @@ window.addEventListener('beforeunload', (e) => {
   }
 });
 
+const CHUNKED_KEYS = ['reservas', 'sesiones', 'auditoria'];
+
 async function syncToSupabase(key, value) {
   if(!supabaseClient) return;
   pendingSyncs++;
   updateSyncUI();
   try {
-    if (key === 'reservas' && Array.isArray(value)) {
+    if (CHUNKED_KEYS.includes(key) && Array.isArray(value)) {
       const CHUNK_SIZE = 2000;
       const numChunks = Math.ceil(value.length / CHUNK_SIZE);
-      await supabaseClient.from('app_state').upsert({ key: 'reservas_meta', value: { chunks: numChunks } });
+      await supabaseClient.from('app_state').upsert({ key: `${key}_meta`, value: { chunks: numChunks } });
       
+      // Borrar chunks viejos en caso de que el número de chunks actual sea menor
+      // (Supabase no lo hace automático). Para simplificar, subimos todos.
       for (let i = 0; i < numChunks; i++) {
         const chunk = value.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-        await supabaseClient.from('app_state').upsert({ key: `reservas_chunk_${i}`, value: chunk });
+        await supabaseClient.from('app_state').upsert({ key: `${key}_chunk_${i}`, value: chunk });
       }
     } else {
       await supabaseClient.from('app_state').upsert({ key: key, value: value });
@@ -1120,18 +1186,21 @@ async function loadFromSupabase() {
     const { data, error } = await supabaseClient.from('app_state').select('*');
     if(error) throw error;
     if(data && data.length > 0) {
-      let reservasChunks = [];
-      let numReservasChunks = 0;
+      let chunksByArrayKey = {};
+      let metaByArrayKey = {};
 
       data.forEach(row => {
         if (typeof InMemoryDB !== 'undefined') {
-          if (row.key === 'reservas_meta') {
-            numReservasChunks = row.value.chunks || 0;
-          } else if (row.key.startsWith('reservas_chunk_')) {
-            const index = parseInt(row.key.replace('reservas_chunk_', ''));
-            reservasChunks[index] = row.value;
+          if (row.key.endsWith('_meta')) {
+            const arrayKey = row.key.replace('_meta', '');
+            metaByArrayKey[arrayKey] = row.value.chunks || 0;
+          } else if (row.key.includes('_chunk_')) {
+            const parts = row.key.split('_chunk_');
+            const arrayKey = parts[0];
+            const index = parseInt(parts[1]);
+            if (!chunksByArrayKey[arrayKey]) chunksByArrayKey[arrayKey] = [];
+            chunksByArrayKey[arrayKey][index] = row.value;
           } else {
-            // Regular key, or the old monolithic 'reservas' row (which will be overwritten if chunks exist)
             InMemoryDB[row.key] = row.value;
           }
         }
@@ -1144,16 +1213,19 @@ async function loadFromSupabase() {
         }
       });
 
-      // Reassemble reservas if chunks were found
-      if (numReservasChunks > 0 && typeof InMemoryDB !== 'undefined') {
-        let allReservas = [];
-        for(let i = 0; i < numReservasChunks; i++) {
-          if (reservasChunks[i]) {
-            allReservas = allReservas.concat(reservasChunks[i]);
+      // Reassemble chunked arrays
+      Object.keys(metaByArrayKey).forEach(arrayKey => {
+        const numChunks = metaByArrayKey[arrayKey];
+        if (numChunks > 0 && chunksByArrayKey[arrayKey] && typeof InMemoryDB !== 'undefined') {
+          let reassembled = [];
+          for (let i = 0; i < numChunks; i++) {
+            if (chunksByArrayKey[arrayKey][i]) {
+              reassembled = reassembled.concat(chunksByArrayKey[arrayKey][i]);
+            }
           }
+          InMemoryDB[arrayKey] = reassembled;
         }
-        InMemoryDB['reservas'] = allReservas;
-      }
+      });
 
       return true;
     }
@@ -1168,14 +1240,20 @@ const InMemoryDB = {
   bloqueos: null,
   clientes: null,
   reservas: null,
-  facturacion: null
+  facturacion: null,
+  nadadores: null,
+  lotes: null,
+  sesiones: null,
+  auditoria: null
 };
 
 // Intentar cargar desde localStorage como respaldo inicial
 try {
   Object.keys(LS_KEYS).forEach(k => {
-    const val = localStorage.getItem(LS_KEYS[k]);
-    if(val) InMemoryDB[k] = JSON.parse(val);
+    if (LS_KEYS[k]) {
+      const val = localStorage.getItem(LS_KEYS[k]);
+      if(val) InMemoryDB[k] = JSON.parse(val);
+    }
   });
 } catch(e) {}
 
@@ -1197,11 +1275,19 @@ const DB={
   getClientes(){return this.get('clientes')||[];},
   getReservas(){return this.get('reservas')||[];},
   getFacturacion(){return this.get('facturacion')||[];},
+  getNadadores(){return this.get('nadadores')||[];},
+  getLotes(){return this.get('lotes')||[];},
+  getSesiones(){return this.get('sesiones')||[];},
+  getAuditoria(){return this.get('auditoria')||[];},
   saveConfig(v){this.set('config',v);},
   saveBloqueos(v){this.set('bloqueos',v);},
   saveClientes(v){this.set('clientes',v);},
   saveReservas(v){this.set('reservas',v);},
   saveFacturacion(v){this.set('facturacion',v);},
+  saveNadadores(v){this.set('nadadores',v);},
+  saveLotes(v){this.set('lotes',v);},
+  saveSesiones(v){this.set('sesiones',v);},
+  saveAuditoria(v){this.set('auditoria',v);},
 };
 
 function genId(p='id'){return p+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);}
@@ -1210,9 +1296,139 @@ function addDays(f,n){const d=new Date(f+'T12:00:00');d.setDate(d.getDate()+n);r
 function addHora(h,n){const[hh,mm]=h.split(':').map(Number);return String(Math.min(hh+n,23)).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
 
 // ----------------------------------------------------------------
-// DATOS DE EJEMPLO
+// DATOS DE EJEMPLO Y AYUDANTES DE LOGICA DE NEGOCIO v2.1
 // ----------------------------------------------------------------
-function initDatosEjemplo(){}
+function initDatosEjemplo(){
+  // Si no hay nadadores ni lotes, inicializamos arreglos vacíos
+  if(!DB.get('nadadores')) DB.saveNadadores([]);
+  if(!DB.get('lotes')) DB.saveLotes([]);
+  if(!DB.get('sesiones')) DB.saveSesiones([]);
+  if(!DB.get('auditoria')) DB.saveAuditoria([]);
+}
+
+function calcularEdadYMenor(fechaNac) {
+  if(!fechaNac) return { edad: null, menorDeEdad: 'No' };
+  const hoy = new Date();
+  const cumple = new Date(fechaNac);
+  let edad = hoy.getFullYear() - cumple.getFullYear();
+  const m = hoy.getMonth() - cumple.getMonth();
+  if (m < 0 || (m === 0 && hoy.getDate() < cumple.getDate())) {
+    edad--;
+  }
+  return {
+    edad,
+    menorDeEdad: edad < 18 ? 'Sí' : 'No'
+  };
+}
+
+function obtenerSiguienteSesionDisponible(clienteId, tipoSesion = 'normal') {
+  const sesiones = DB.getSesiones().filter(s => {
+    if (s.cliente_id !== clienteId || s.estado !== 'DISPONIBLE') return false;
+    const esInd = s.codigo.endsWith('-IND');
+    return tipoSesion === 'induccion' ? esInd : !esInd;
+  });
+  if (sesiones.length === 0) return null;
+  
+  const lotes = DB.getLotes();
+  const loteMap = {};
+  lotes.forEach(l => { loteMap[l.id] = l; });
+  
+  sesiones.sort((a, b) => {
+    const loteA = loteMap[a.lote_id];
+    const loteB = loteMap[b.lote_id];
+    
+    const vA = loteA ? loteA.fecha_vencimiento : null;
+    const vB = loteB ? loteB.fecha_vencimiento : null;
+    
+    if (vA && vB) {
+      return vA.localeCompare(vB);
+    }
+    if (vA) return -1; // a vence primero
+    if (vB) return 1;  // b vence primero
+    
+    // Si no tienen vencimiento activo, usar la fecha de compra del lote (el lote_id lleva el timestamp de creación)
+    const idA = a.lote_id || '';
+    const idB = b.lote_id || '';
+    return idA.localeCompare(idB);
+  });
+  
+  return sesiones[0];
+}
+
+function activarVigenciaLote(loteId, fechaConsumo) {
+  const lotes = DB.getLotes();
+  const lote = lotes.find(l => l.id === loteId);
+  if (!lote) return;
+  if (lote.fecha_activacion) return; // Ya activado
+  
+  lote.fecha_activacion = fechaConsumo;
+  lote.estado_vigencia = 'activo';
+  
+  // Buscar días de vigencia en la configuración del paquete
+  const config = DB.getConfig();
+  const paquetes = config.paquetes || PAQUETES_DEFAULT;
+  const paq = paquetes.find(p => p.id === lote.paquete_id || p.nombre.toUpperCase() === lote.paquete_nombre.toUpperCase());
+  const diasVigencia = paq ? paq.vigencia_dias : 30;
+  
+  if (diasVigencia > 0) {
+    lote.fecha_vencimiento = addDays(fechaConsumo, diasVigencia);
+  } else {
+    lote.fecha_vencimiento = '2099-12-31'; // Prácticamente ilimitado
+  }
+  
+  // Actualizar la fecha de vencimiento en todas las sesiones de este lote
+  const sesiones = DB.getSesiones();
+  sesiones.forEach(s => {
+    if (s.lote_id === loteId) {
+      s.fecha_vencimiento = lote.fecha_vencimiento;
+    }
+  });
+  
+  DB.saveLotes(lotes);
+  DB.saveSesiones(sesiones);
+  registrarAuditoria('activacion_lote', `Lote ${lote.factura} activado. Vigencia calculada hasta ${lote.fecha_vencimiento} (primer consumo: ${fechaConsumo})`);
+}
+
+function registrarAuditoria(accion, detalles) {
+  const auditoria = DB.getAuditoria();
+  auditoria.unshift({
+    id: genId('aud'),
+    fecha: new Date().toISOString(),
+    usuario: isAdmin() ? 'admin' : 'recepcion',
+    accion,
+    detalles
+  });
+  if (auditoria.length > 5000) {
+    auditoria.splice(5000);
+  }
+  DB.saveAuditoria(auditoria);
+}
+
+function procesarVencimientos() {
+  const hoy = new Date().toISOString().split('T')[0];
+  const lotes = DB.getLotes();
+  const sesiones = DB.getSesiones();
+  let cambiados = 0;
+  
+  lotes.forEach(l => {
+    if (l.fecha_vencimiento && l.fecha_vencimiento < hoy && l.estado_vigencia === 'activo') {
+      l.estado_vigencia = 'vencido';
+      // Todas las sesiones disponibles del lote pasan a VENCIDA
+      sesiones.forEach(s => {
+        if (s.lote_id === l.id && s.estado === 'DISPONIBLE') {
+          s.estado = 'VENCIDA';
+          cambiados++;
+        }
+      });
+    }
+  });
+  
+  if (cambiados > 0) {
+    DB.saveLotes(lotes);
+    DB.saveSesiones(sesiones);
+    registrarAuditoria('procesar_vencimientos', `Vencimiento automático de ${cambiados} sesiones de lotes expirados.`);
+  }
+}
 
 // ----------------------------------------------------------------
 // ESTADO GLOBAL
@@ -1392,6 +1608,7 @@ function switchTab(grupo,tab,el){
   if(grupo==='param'&&tab==='paquetes') renderPaquetes();
   if(grupo==='param'&&tab==='bloqueos') renderBloqueos();
   if(grupo==='param'&&tab==='backup') renderModoProduccionStatus();
+  if(grupo==='param'&&tab==='auditoria') renderAuditoria();
 }
 
 // ----------------------------------------------------------------
@@ -1487,6 +1704,16 @@ function getSesionesBadge(c){
 
 function tieneSesionesDisponibles(c,tipoSesion='normal'){
   if(!c) return false;
+  // Comprobar si tiene lotes (v2.1)
+  const lotes = DB.getLotes().filter(l => l.cliente_id === c.id && l.estado_vigencia !== 'anulado');
+  if (lotes.length > 0) {
+    const sesiones = DB.getSesiones().filter(s => s.cliente_id === c.id && s.estado === 'DISPONIBLE');
+    if (tipoSesion === 'induccion') {
+      return sesiones.some(s => s.codigo.endsWith('-IND'));
+    }
+    return sesiones.some(s => !s.codigo.endsWith('-IND'));
+  }
+  // Fallback era anterior (legado)
   if(tipoSesion==='induccion') return (c.sesiones_induccion||0)>0;
   return (c.sesiones_disponibles||0)>0;
 }
@@ -1534,17 +1761,73 @@ function consumirSesion(clienteId,reservaId,tipoSesion,motivoExtra){
   if(!cli) return;
   if(!cli.historial_sesiones) cli.historial_sesiones=[];
   let motivo=motivoExtra||'Sesión consumida';
-  if(tipoSesion==='induccion'){
-    if((cli.sesiones_induccion||0)>0){cli.sesiones_induccion=0;cli.sesiones_induccion_realizada=true;motivo='Sesión de inducción realizada';}
-    cli.historial_sesiones.push({id:genId('m'),fecha:new Date().toISOString(),tipo:'consumo_induccion',cantidad:-1,saldo_resultante:0,motivo,es_admin:isAdmin(),reserva_id:reservaId});
-    toast('Sesión de inducción marcada como realizada.','info');
-  } else {
-    if((cli.sesiones_disponibles||0)>0){
-      cli.sesiones_disponibles=Math.max(0,(cli.sesiones_disponibles||0)-1);
-      cli.sesiones_usadas=(cli.sesiones_usadas||0)+1;
+  
+  const lotes = DB.getLotes().filter(l => l.cliente_id === clienteId && l.estado_vigencia !== 'anulado');
+  const usaV2 = lotes.length > 0;
+  
+  if (usaV2) {
+    const sesiones = DB.getSesiones();
+    const reservas = DB.getReservas();
+    const rObj = reservas.find(r => r.id === reservaId);
+    
+    // Buscar si hay sesión previamente vinculada a esta reserva
+    let ses = sesiones.find(s => s.reserva_id === reservaId);
+    if (!ses) {
+      // Si no hay vinculada, buscar la siguiente disponible FIFO
+      ses = obtenerSiguienteSesionDisponible(clienteId, tipoSesion);
     }
-    cli.historial_sesiones.push({id:genId('m'),fecha:new Date().toISOString(),tipo:'consumo',cantidad:-1,saldo_resultante:cli.sesiones_disponibles,motivo,es_admin:isAdmin(),reserva_id:reservaId});
-    toast(`Sesión consumida. Saldo: ${cli.sesiones_disponibles} sesiones disponibles.`,'info');
+    
+    if (ses) {
+      const estadoSes = (rObj && rObj.estado === 'no_show') ? 'NO-SHOW' : 'USADA';
+      ses.estado = estadoSes;
+      ses.fecha_consumo = new Date().toISOString();
+      ses.reserva_id = reservaId;
+      
+      // Activar lote reactivamente en el primer consumo
+      activarVigenciaLote(ses.lote_id, rObj ? rObj.fecha : new Date().toISOString().split('T')[0]);
+      
+      // Guardar sesiones
+      DB.saveSesiones(sesiones);
+      
+      // Registrar log de historial en cliente para consistencia visual
+      const saldoDisp = sesiones.filter(s => s.cliente_id === clienteId && s.estado === 'DISPONIBLE').length;
+      cli.historial_sesiones.push({
+        id: genId('m'),
+        fecha: new Date().toISOString(),
+        tipo: 'consumo',
+        amount: -1,
+        saldo_resultante: saldoDisp,
+        motivo: `${motivo} (Sesión ${ses.codigo})`,
+        es_admin: isAdmin(),
+        reserva_id: reservaId
+      });
+      
+      // Actualizar contadores del cliente para fallback/badges
+      cli.sesiones_disponibles = saldoDisp;
+      cli.sesiones_usadas = (cli.sesiones_usadas || 0) + 1;
+      if (tipoSesion === 'induccion') {
+        cli.sesiones_induccion = Math.max(0, (cli.sesiones_induccion || 0) - 1);
+        cli.sesiones_induccion_realizada = true;
+      }
+      
+      toast(`Sesión ${ses.codigo} consumida. Saldo: ${saldoDisp} disponibles.`,'info');
+    } else {
+      toast('No hay sesiones disponibles en el inventario para consumir.', 'warning');
+    }
+  } else {
+    // Fallback era anterior (legado)
+    if(tipoSesion==='induccion'){
+      if((cli.sesiones_induccion||0)>0){cli.sesiones_induccion=0;cli.sesiones_induccion_realizada=true;motivo='Sesión de inducción realizada';}
+      cli.historial_sesiones.push({id:genId('m'),fecha:new Date().toISOString(),tipo:'consumo_induccion',cantidad:-1,saldo_resultante:0,motivo,es_admin:isAdmin(),reserva_id:reservaId});
+      toast('Sesión de inducción marcada como realizada.','info');
+    } else {
+      if((cli.sesiones_disponibles||0)>0){
+        cli.sesiones_disponibles=Math.max(0,(cli.sesiones_disponibles||0)-1);
+        cli.sesiones_usadas=(cli.sesiones_usadas||0)+1;
+      }
+      cli.historial_sesiones.push({id:genId('m'),fecha:new Date().toISOString(),tipo:'consumo',cantidad:-1,saldo_resultante:cli.sesiones_disponibles,motivo,es_admin:isAdmin(),reserva_id:reservaId});
+      toast(`Sesión consumida. Saldo: ${cli.sesiones_disponibles} sesiones disponibles.`,'info');
+    }
   }
   DB.saveClientes(clientes);
 }
@@ -1554,15 +1837,73 @@ function devolverSesion(clienteId,reservaId,tipoSesion){
   const cli=clientes.find(c=>c.id===clienteId);
   if(!cli) return;
   if(!cli.historial_sesiones) cli.historial_sesiones=[];
-  if(tipoSesion==='induccion'){
-    cli.sesiones_induccion=1;
-    cli.historial_sesiones.push({id:genId('m'),fecha:new Date().toISOString(),tipo:'devolucion_induccion',cantidad:1,saldo_resultante:1,motivo:'Sesión de inducción devuelta por cancelación',es_admin:isAdmin(),reserva_id:reservaId});
-    toast('Sesión de inducción devuelta.','info');
+  
+  const lotes = DB.getLotes().filter(l => l.cliente_id === clienteId && l.estado_vigencia !== 'anulado');
+  const usaV2 = lotes.length > 0;
+  
+  if (usaV2) {
+    const sesiones = DB.getSesiones();
+    const ses = sesiones.find(s => s.reserva_id === reservaId);
+    if (ses) {
+      ses.estado = 'DISPONIBLE';
+      ses.fecha_consumo = null;
+      ses.reserva_id = null;
+      
+      // Si el lote se activó y esta era la única sesión consumida/usada, revertimos la activación
+      const loteId = ses.lote_id;
+      const loteSesiones = sesiones.filter(s => s.lote_id === loteId);
+      const tieneConsumidas = loteSesiones.some(s => s.estado === 'USADA' || s.estado === 'NO-SHOW');
+      
+      if (!tieneConsumidas) {
+        const allLotes = DB.getLotes();
+        const lote = allLotes.find(l => l.id === loteId);
+        if (lote) {
+          lote.fecha_activacion = null;
+          lote.fecha_vencimiento = null;
+          lote.estado_vigencia = 'no_iniciado';
+          DB.saveLotes(allLotes);
+          
+          // Limpiar también fecha de vencimiento de las sesiones
+          loteSesiones.forEach(s => {
+            s.fecha_vencimiento = null;
+          });
+        }
+      }
+      
+      DB.saveSesiones(sesiones);
+      
+      const saldoDisp = sesiones.filter(s => s.cliente_id === clienteId && s.estado === 'DISPONIBLE').length;
+      cli.historial_sesiones.push({
+        id: genId('m'),
+        fecha: new Date().toISOString(),
+        tipo: 'devolucion',
+        cantidad: 1,
+        saldo_resultante: saldoDisp,
+        motivo: `Sesión ${ses.codigo} devuelta por cancelación`,
+        es_admin: isAdmin(),
+        reserva_id: reservaId
+      });
+      
+      cli.sesiones_disponibles = saldoDisp;
+      cli.sesiones_usadas = Math.max(0, (cli.sesiones_usadas || 0) - 1);
+      if (tipoSesion === 'induccion') {
+        cli.sesiones_induccion = (cli.sesiones_induccion || 0) + 1;
+      }
+      
+      toast(`Sesión ${ses.codigo} devuelta. Saldo: ${saldoDisp} sesiones.`,'info');
+    }
   } else {
-    cli.sesiones_disponibles=(cli.sesiones_disponibles||0)+1;
-    cli.sesiones_usadas=Math.max(0,(cli.sesiones_usadas||0)-1);
-    cli.historial_sesiones.push({id:genId('m'),fecha:new Date().toISOString(),tipo:'devolucion',cantidad:1,saldo_resultante:cli.sesiones_disponibles,motivo:'Sesión devuelta por cancelación',es_admin:isAdmin(),reserva_id:reservaId});
-    toast(`Sesión devuelta. Saldo: ${cli.sesiones_disponibles} sesiones.`,'info');
+    // Fallback era anterior (legado)
+    if(tipoSesion==='induccion'){
+      cli.sesiones_induccion=1;
+      cli.historial_sesiones.push({id:genId('m'),fecha:new Date().toISOString(),tipo:'devolucion_induccion',cantidad:1,saldo_resultante:1,motivo:'Sesión de inducción devuelta por cancelación',es_admin:isAdmin(),reserva_id:reservaId});
+      toast('Sesión de inducción devuelta.','info');
+    } else {
+      cli.sesiones_disponibles=(cli.sesiones_disponibles||0)+1;
+      cli.sesiones_usadas=Math.max(0,(cli.sesiones_usadas||0)-1);
+      cli.historial_sesiones.push({id:genId('m'),fecha:new Date().toISOString(),tipo:'devolucion',cantidad:1,saldo_resultante:cli.sesiones_disponibles,motivo:'Sesión devuelta por cancelación',es_admin:isAdmin(),reserva_id:reservaId});
+      toast(`Sesión devuelta. Saldo: ${cli.sesiones_disponibles} sesiones.`,'info');
+    }
   }
   DB.saveClientes(clientes);
 }
@@ -1715,6 +2056,11 @@ function buildCell(f,hora,carril,reservas,bloqTotal,esPasado){
   const cli=getClienteById(r.cliente_id);
   const nombre=cli?cli.nombre:'Cliente';
   const compañante=r.acompañante_id?getClienteById(r.acompañante_id):null;
+  
+  const nadador = r.nadador_id ? DB.getNadadores().find(n => n.id === r.nadador_id) : null;
+  const nombreNadDisplay = nadador ? `${nadador.nombres} ${nadador.apellidos}` : '';
+  const nombreCellDisplay = nadador ? `${nombre} (${nadador.nombres})` : nombre;
+  
   const icons={reservado:'🔵',asistio:'✅',no_show:'❌',cancelado:'🚫'};
   const cls=r.tipo_sesion==='induccion'?'induccion':(r.estado==='no_show'?'no_show':r.estado);
   const icon=r.tipo_sesion==='induccion'?'🎓':icons[r.estado]||'🔵';
@@ -1727,11 +2073,11 @@ function buildCell(f,hora,carril,reservas,bloqTotal,esPasado){
     ${lockEl}
     <div class="cell-content">
       <span class="cell-icon">${icon}</span>
-      <span class="cell-name" style="${extraStyle}">${truncate(nombre,15)}</span>
+      <span class="cell-name" style="${extraStyle}">${truncate(nombreCellDisplay,15)}</span>
       ${compañante?`<span class="cell-companion-tag">👥 ${truncate(compañante.nombre,12)}</span>`:''}
     </div>
     <div class="tooltip">
-      <strong>${nombre}</strong>${compañante?`<br>👥 ${compañante.nombre}`:''}
+      <strong>${nombre}</strong>${nombreNadDisplay?`<br>🏊 Nadador: ${nombreNadDisplay}`:''}${compañante?`<br>👥 ${compañante.nombre}`:''}
       <br>${cli?.tipo_documento||''} ${cli?.documento||'Sin doc'}
       <br>${hora} – ${addHora(hora,1)} · ${carril.nombre}
       <br>Estado: ${r.estado.replace('_',' ')}${r.tipo_sesion==='induccion'?' 🎓 Inducción':''}
@@ -1939,6 +2285,7 @@ function abrirNuevaReserva(f,hora,carrilId){
     </div>
     <div id="resultado-busqueda-cliente"></div>
     <div id="cliente-seleccionado-panel"></div>
+    <div id="nadador-panel" style="display:none"></div>
     <div id="tipo-sesion-panel" style="display:none"></div>
     <div id="acompañante-panel" style="display:none"></div>
     <div class="form-group" style="margin-top:10px">
@@ -2014,6 +2361,26 @@ function seleccionarTitularReserva(clienteId){
     </div>
   `;
 
+  // Nadador (Requerido para la nueva era >= '2026-07-01')
+  const ndpanel=document.getElementById('nadador-panel');
+  const esNuevaEra = App.panelData.fecha >= '2026-07-01';
+  if (esNuevaEra) {
+    const nadadores = DB.getNadadores().filter(n => n.asociaciones.some(a => a.cliente_id === clienteId && a.autorizado));
+    ndpanel.style.display = 'block';
+    ndpanel.innerHTML = `
+      <div class="form-group" style="margin-top:10px">
+        <label class="form-label">🏊 Nadador (Requerido)</label>
+        <select class="form-control" id="reserva-nadador-select">
+          <option value="">-- Seleccionar nadador --</option>
+          ${nadadores.map(n => `<option value="${n.id}">${n.nombres} ${n.apellidos} (${n.tipo_documento}-${n.documento})</option>`).join('')}
+        </select>
+      </div>
+    `;
+  } else {
+    ndpanel.style.display = 'none';
+    ndpanel.innerHTML = '';
+  }
+
   // Tipo de sesión
   const tspanel=document.getElementById('tipo-sesion-panel');
   if((cli.sesiones_induccion||0)>0&&!cli.sesiones_induccion_realizada){
@@ -2083,24 +2450,66 @@ function confirmarReserva(){
   const {fecha,hora,carrilId}=App.panelData;
   const cli=getClienteById(_clienteSeleccionadoId);
   if(!cli) return;
+  
   if(!tieneSesionesDisponibles(cli,_tipoSesionSeleccionado)&&!isAdmin()){
     toast('El cliente no tiene sesiones disponibles.','error');return;
   }
+  
+  const esNuevaEra = fecha >= '2026-07-01';
+  let nadadorId = null;
+  if (esNuevaEra) {
+    const sel = document.getElementById('reserva-nadador-select');
+    nadadorId = sel ? sel.value : null;
+    if (!nadadorId) {
+      toast('Debe seleccionar un nadador para reservar a partir del 1 de julio de 2026.', 'error');
+      return;
+    }
+  }
+  
+  const lotes = DB.getLotes().filter(l => l.cliente_id === _clienteSeleccionadoId && l.estado_vigencia !== 'anulado');
+  const usaV2 = lotes.length > 0;
+  let sesionReservada = null;
+  
+  if (usaV2) {
+    sesionReservada = obtenerSiguienteSesionDisponible(_clienteSeleccionadoId, _tipoSesionSeleccionado);
+    if (!sesionReservada && !isAdmin()) {
+      toast('El cliente no tiene sesiones disponibles en su inventario para esta reserva.', 'error');
+      return;
+    }
+  }
+
   const reservas=DB.getReservas();
   const existe=reservas.find(r=>r.fecha===fecha&&r.hora_inicio===hora&&r.carril_id===carrilId&&r.estado!=='cancelado');
   if(existe){toast('Ya existe una reserva en ese slot.','error');return;}
   const notas=document.getElementById('nueva-reserva-notas')?.value||'';
+  
+  const reservaId = genId('r');
   const nueva={
-    id:genId('r'),cliente_id:_clienteSeleccionadoId,carril_id:carrilId,
+    id:reservaId,cliente_id:_clienteSeleccionadoId,carril_id:carrilId,
     fecha,hora_inicio:hora,hora_fin:addHora(hora,1),
     estado:'reservado',creada_en:new Date().toISOString(),notas,
     tipo_sesion:_tipoSesionSeleccionado,
     es_con_acompañante:!!_acompañanteSeleccionadoId,
     acompañante_id:_acompañanteSeleccionadoId||null,
     sesion_consumida:false,
+    nadador_id: nadadorId,
+    sesion_id: sesionReservada ? sesionReservada.id : null
   };
+  
   reservas.push(nueva);
   DB.saveReservas(reservas);
+  
+  if (sesionReservada) {
+    sesionReservada.estado = 'RESERVADA';
+    sesionReservada.reserva_id = reservaId;
+    sesionReservada.nadador_id = nadadorId;
+    
+    const sesiones = DB.getSesiones();
+    const idx = sesiones.findIndex(s => s.id === sesionReservada.id);
+    if (idx >= 0) sesiones[idx] = sesionReservada;
+    DB.saveSesiones(sesiones);
+  }
+  
   _clienteSeleccionadoId=null;_acompañanteSeleccionadoId=null;
   cerrarPanel();renderVistaDia();
   toast(`Reserva creada para ${cli.nombre}${_tipoSesionSeleccionado==='induccion'?' (Inducción)':''}`,'success');
@@ -2148,6 +2557,10 @@ function abrirGestionReserva(id){
   const ultimasR=reservas.filter(rv=>rv.cliente_id===r.cliente_id&&rv.id!==r.id).sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,4);
   const icons={reservado:'🔵',asistio:'✅',no_show:'❌',cancelado:'🚫'};
 
+  const nadador = r.nadador_id ? DB.getNadadores().find(n => n.id === r.nadador_id) : null;
+  const sesObj = r.sesion_id ? DB.getSesiones().find(s => s.id === r.sesion_id) : null;
+  const codigoSes = sesObj ? ` (${sesObj.codigo})` : '';
+
   document.getElementById('panel-body').innerHTML=`
     ${esPasada&&isAdmin()?`<div class="alert alert-warning mb-8">🔐 Modo admin: editando registro del pasado</div>`:''}
     ${esPasada&&!isAdmin()?`<div class="lock-notice">🔒 Registro del pasado. Solo lectura.</div>`:''}
@@ -2155,6 +2568,7 @@ function abrirGestionReserva(id){
       <div style="font-size:1rem;font-weight:700">${cli?cli.nombre:'?'}</div>
       <div class="text-sm text-muted">${cli?.tipo_documento||''} ${cli?.documento||'Sin doc'}</div>
       ${cli?`<div class="text-sm text-muted">📞 ${cli.telefono||'—'}</div>`:''}
+      ${nadador?`<div style="margin-top:6px;font-size:0.82rem">🏊 Nadador: <strong>${nadador.nombres} ${nadador.apellidos}</strong></div>`:''}
       ${comp?`<div style="margin-top:6px;font-size:0.82rem">👥 Acompañante: <strong>${comp.nombre}</strong></div>`:''}
       <div style="margin-top:6px">${getBadgeAuth(cli)} ${getSesionesBadge(cli)}</div>
     </div>
@@ -2163,7 +2577,7 @@ function abrirGestionReserva(id){
       <span class="badge badge-gray">${formatFecha(r.fecha)} ${r.hora_inicio}–${r.hora_fin}</span>
       <span class="badge ${r.estado==='asistio'?'badge-green':r.estado==='no_show'?'badge-red':r.estado==='cancelado'?'badge-gray':'badge-blue'}">${icons[r.estado]||''} ${r.estado.replace('_',' ')}</span>
       ${r.tipo_sesion==='induccion'?'<span class="badge badge-purple">🎓 Inducción</span>':''}
-      ${r.sesion_consumida?'<span class="badge badge-red">🎫 Sesión consumida</span>':'<span class="badge badge-green">🎫 Sesión pendiente</span>'}
+      ${r.sesion_consumida?'<span class="badge badge-red">🎫 Sesión consumida' + codigoSes + '</span>':'<span class="badge badge-green">🎫 Sesión asignada' + codigoSes + '</span>'}
     </div>
     ${ultimasR.length?`<div class="mb-8"><div class="text-sm fw-600 text-muted mb-8">Últimas reservas:</div>
     ${ultimasR.map(rv=>{const cr=getCarrilById(rv.carril_id);return `<div class="festivo-row text-sm"><span>${formatFecha(rv.fecha)} ${rv.hora_inicio}</span><span class="text-muted">${cr?.nombre||'?'} · ${rv.estado}</span></div>`;}).join('')}</div>`:''}
@@ -2265,34 +2679,82 @@ function cerrarPanel(){App.panelAbierto=false;_clienteSeleccionadoId=null;_acomp
 // ----------------------------------------------------------------
 // MÓDULO CLIENTES
 // ----------------------------------------------------------------
+function getNombreCliente(c) {
+  if (!c) return '';
+  if (c.tipo_documento === 'NIT') {
+    return c.razon_social || c.nombre || '';
+  }
+  if (c.nombres || c.apellidos) {
+    return ((c.nombres || '') + ' ' + (c.apellidos || '')).trim();
+  }
+  return c.nombre || '';
+}
+
+function switchSubmodClientes(mode) {
+  activeSubmodClientes = mode;
+  document.getElementById('btn-submod-clientes').classList.toggle('active', mode === 'clientes');
+  document.getElementById('btn-submod-nadadores').classList.toggle('active', mode === 'nadadores');
+  document.getElementById('container-clientes').style.display = mode === 'clientes' ? 'block' : 'none';
+  document.getElementById('container-nadadores').style.display = mode === 'nadadores' ? 'block' : 'none';
+  
+  document.getElementById('btn-cli-nuevo').style.display = mode === 'clientes' ? 'inline-block' : 'none';
+  document.getElementById('btn-nad-nuevo').style.display = mode === 'nadadores' ? 'inline-block' : 'none';
+  document.getElementById('btn-importar-historicos').style.display = mode === 'clientes' ? 'inline-block' : 'none';
+
+  if (mode === 'clientes') {
+    renderClientes();
+  } else {
+    renderNadadores();
+  }
+}
+
 function renderClientes(){
-  const clientes=DB.getClientes();const q=document.getElementById('search-clientes')?.value?.toLowerCase()||'';
+  const clientes=DB.getClientes();
+  const q=document.getElementById('search-clientes')?.value?.toLowerCase()||'';
   let filtered=clientes;
-  if(q) filtered=filtered.filter(c=>c.nombre.toLowerCase().includes(q)||(c.documento&&c.documento.includes(q)));
+  if(q) filtered=filtered.filter(c=>getNombreCliente(c).toLowerCase().includes(q)||(c.documento&&c.documento.includes(q)));
   const filtro=App.filtroCliente;
+  
   if(filtro==='activos') filtered=filtered.filter(c=>c.tipo==='activo');
+  else if(filtro==='pre_clientes') filtered=filtered.filter(c=>c.tipo==='pre_cliente');
   else if(filtro==='historicos') filtered=filtered.filter(c=>c.tipo==='historico');
   else if(filtro==='con_sesiones') filtered=filtered.filter(c=>(c.sesiones_disponibles||0)>0||(c.sesiones_induccion||0)>0);
-  else if(filtro==='sin_sesiones') filtered=filtered.filter(c=>c.tipo==='activo'&&(c.sesiones_disponibles||0)===0&&(c.sesiones_induccion||0)===0);
+  else if(filtro==='sin_sesiones') filtered=filtered.filter(c=>(c.tipo==='activo'||c.tipo==='pre_cliente')&&(c.sesiones_disponibles||0)===0&&(c.sesiones_induccion||0)===0);
   else if(filtro==='por_vencer') filtered=filtered.filter(c=>getEstadoAuth(c)==='por_vencer');
   else if(filtro==='vencidos') filtered=filtered.filter(c=>getEstadoAuth(c)==='vencido');
+  
   const tbody=document.getElementById('tabla-clientes');const noData=document.getElementById('no-clientes');
+  if(!tbody) return;
   if(!filtered.length){tbody.innerHTML='';noData.style.display='block';return;}
   noData.style.display='none';
+  
   const pqColor={PLATA:'pk-plata',ORO:'pk-oro',DIAMANTE:'pk-diamante',BLACK:'pk-black',INDIVIDUAL:'pk-individual'};
   tbody.innerHTML=filtered.map(c=>{
-    const ses=c.sesiones_disponibles||0;const ind=c.sesiones_induccion||0;
-    const pqBadge=c.paquete_actual?`<span class="paquete-badge ${pqColor[c.paquete_actual]||''}">${c.paquete_actual}</span>`:'<span class="text-muted">—</span>';
+    // Para la era v2.1 consolidamos sesiones activas
+    const sesionesCli = DB.getSesiones().filter(s => s.cliente_id === c.id);
+    const lotesCli = DB.getLotes().filter(l => l.cliente_id === c.id);
+    
+    let ses = c.sesiones_disponibles || 0;
+    if (lotesCli.length > 0 || sesionesCli.length > 0) {
+      ses = sesionesCli.filter(s => s.estado === 'DISPONIBLE').length;
+    }
+    const ind = c.sesiones_induccion || 0;
+    const pqBadge = c.paquete_actual ? `<span class="paquete-badge ${pqColor[c.paquete_actual] || ''}">${c.paquete_actual}</span>` : '<span class="text-muted">—</span>';
+    
+    const estadoLabel = c.tipo === 'pre_cliente' ? '<span class="badge badge-yellow">Pre-Cliente</span>' :
+                        c.tipo === 'activo' ? '<span class="badge badge-green">Activo</span>' :
+                        '<span class="badge badge-gray">Histórico</span>';
+                        
     return `<tr>
-      <td><span style="font-weight:600">${c.nombre}</span></td>
-      <td>${c.tipo_documento?c.tipo_documento+' '+c.documento:'<span class="text-muted">—</span>'}</td>
+      <td><span style="font-weight:600">${getNombreCliente(c)}</span></td>
+      <td>${c.tipo_documento ? c.tipo_documento + ' ' + c.documento : '<span class="text-muted">—</span>'}</td>
       <td>${pqBadge}</td>
       <td>
-        <span class="badge ${ses>5?'badge-green':ses>0?'badge-yellow':'badge-red'}">🎫 ${ses}</span>
-        ${ind>0?'<span class="badge badge-purple">🎓</span>':''}
+        <span class="badge ${ses > 5 ? 'badge-green' : ses > 0 ? 'badge-yellow' : 'badge-red'}">🎫 ${ses}</span>
+        ${ind > 0 ? '<span class="badge badge-purple">🎓</span>' : ''}
       </td>
-      <td>${c.vigencia_hasta?formatFecha(c.vigencia_hasta):'<span class="text-muted">—</span>'}</td>
-      <td>${getBadgeAuth(c)}</td>
+      <td>${c.vigencia_hasta ? formatFecha(c.vigencia_hasta) : '<span class="text-muted">—</span>'}</td>
+      <td>${estadoLabel} ${getBadgeAuth(c)}</td>
       <td>
         <div style="display:flex;gap:4px;flex-wrap:wrap">
           <button class="btn btn-secondary btn-xs" onclick="abrirFichaCliente('${c.id}')">Ficha</button>
@@ -2314,20 +2776,45 @@ function mostrarFormCliente(id){
   const cli=id?getClienteById(id):null;
   document.getElementById('modal-title').innerHTML=cli?'✏️ Editar cliente':'➕ Nuevo cliente';
   document.getElementById('modal-body').innerHTML=`
-    <div class="form-group"><label class="form-label">Nombre completo *</label><input type="text" class="form-control" id="cli-nombre" value="${cli?cli.nombre:''}"></div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">Tipo documento</label><select class="form-control" id="cli-tipo-doc"><option value="">—</option><option value="CC" ${cli?.tipo_documento==='CC'?'selected':''}>CC</option><option value="TI" ${cli?.tipo_documento==='TI'?'selected':''}>TI</option></select></div>
-      <div class="form-group"><label class="form-label">Documento</label><input type="text" class="form-control" id="cli-documento" value="${cli?.documento||''}"></div>
+      <div class="form-group">
+        <label class="form-label">Tipo documento *</label>
+        <select class="form-control" id="cli-tipo-doc" onchange="actualizarCamposFormCliente()">
+          <option value="CC" ${cli?.tipo_documento==='CC'?'selected':''}>CC</option>
+          <option value="TI" ${cli?.tipo_documento==='TI'?'selected':''}>TI</option>
+          <option value="CE" ${cli?.tipo_documento==='CE'?'selected':''}>CE</option>
+          <option value="NIT" ${cli?.tipo_documento==='NIT'?'selected':''}>NIT</option>
+          <option value="PAS" ${cli?.tipo_documento==='PAS'?'selected':''}>PAS</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Documento *</label><input type="text" class="form-control" id="cli-documento" value="${cli?.documento||''}"></div>
     </div>
+    
+    <!-- Campos Persona Natural -->
+    <div id="form-cli-natural">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nombres *</label><input type="text" class="form-control" id="cli-nombres" value="${cli?.nombres||(cli&&!cli.razon_social?cli.nombre:'')}"></div>
+        <div class="form-group"><label class="form-label">Apellidos *</label><input type="text" class="form-control" id="cli-apellidos" value="${cli?.apellidos||''}"></div>
+      </div>
+    </div>
+
+    <!-- Campos Persona Jurídica -->
+    <div id="form-cli-juridico" style="display:none">
+      <div class="form-group"><label class="form-label">Razón Social *</label><input type="text" class="form-control" id="cli-razon-social" value="${cli?.razon_social||(cli&&cli.tipo_documento==='NIT'?cli.nombre:'')}"></div>
+    </div>
+
     <div class="form-row">
+      <div class="form-group"><label class="form-label">Dirección</label><input type="text" class="form-control" id="cli-direccion" value="${cli?.direccion||''}"></div>
       <div class="form-group"><label class="form-label">Teléfono</label><input type="text" class="form-control" id="cli-telefono" value="${cli?.telefono||''}"></div>
-      <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-control" id="cli-email" value="${cli?.email||''}"></div>
     </div>
     <div class="form-row">
+      <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-control" id="cli-email" value="${cli?.email||''}"></div>
       <div class="form-group"><label class="form-label">Vigencia hasta</label><input type="date" class="form-control" id="cli-vigencia" value="${cli?.vigencia_hasta||''}"></div>
-      <div class="form-group" style="display:flex;align-items:center;gap:10px;padding-top:22px">
-        <label class="toggle-switch"><input type="checkbox" id="cli-autorizado" ${cli?.autorizado?'checked':''}><span class="toggle-slider"></span></label>
-        <span class="form-label" style="margin:0">Autorizado</span>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="display:flex;align-items:center;gap:10px;padding-top:10px">
+        <label class="toggle-switch"><input type="checkbox" id="cli-autorizado" ${cli ? (cli.autorizado ? 'checked' : '') : 'checked'}><span class="toggle-slider"></span></label>
+        <span class="form-label" style="margin:0">Autorizado para reservar</span>
       </div>
     </div>
     <div class="form-group"><label class="form-label">Notas</label><textarea class="form-control" id="cli-notas" rows="2">${cli?.notas||''}</textarea></div>
@@ -2336,25 +2823,116 @@ function mostrarFormCliente(id){
     <button class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
     <button class="btn btn-primary" onclick="guardarCliente('${id||''}')">💾 Guardar</button>
   `;
+  actualizarCamposFormCliente();
   document.getElementById('modal-overlay').classList.add('active');
 }
 
+function actualizarCamposFormCliente() {
+  const tipoDoc = document.getElementById('cli-tipo-doc').value;
+  const divJuridico = document.getElementById('form-cli-juridico');
+  const divNatural = document.getElementById('form-cli-natural');
+  if (tipoDoc === 'NIT') {
+    divJuridico.style.display = 'block';
+    divNatural.style.display = 'none';
+  } else {
+    divJuridico.style.display = 'none';
+    divNatural.style.display = 'block';
+  }
+}
+
 function guardarCliente(id){
-  const nombre=document.getElementById('cli-nombre').value.trim();
-  if(!nombre){toast('El nombre es requerido.','error');return;}
+  const tipoDoc=document.getElementById('cli-tipo-doc').value;
+  const documento=document.getElementById('cli-documento').value.trim();
+  const direccion=document.getElementById('cli-direccion').value.trim();
+  const telefono=document.getElementById('cli-telefono').value.trim();
+  const email=document.getElementById('cli-email').value.trim();
+  const vigencia_hasta=document.getElementById('cli-vigencia').value||null;
+  const autorizado=document.getElementById('cli-autorizado').checked;
+  const notas=document.getElementById('cli-notas').value.trim();
+
+  if(!tipoDoc || !documento){
+    toast('El tipo y número de documento son requeridos.','error');return;
+  }
+
+  let nombre = '';
+  let nombres = '';
+  let apellidos = '';
+  let razon_social = '';
+
+  if (tipoDoc === 'NIT') {
+    razon_social = document.getElementById('cli-razon-social').value.trim();
+    if (!razon_social) { toast('La razón social es requerida.','error'); return; }
+    nombre = razon_social;
+  } else {
+    nombres = document.getElementById('cli-nombres').value.trim();
+    apellidos = document.getElementById('cli-apellidos').value.trim();
+    if (!nombres || !apellidos) { toast('Nombres y apellidos son requeridos.','error'); return; }
+    nombre = `${nombres} ${apellidos}`;
+  }
+
   const clientes=DB.getClientes();
+  // Validar identificación única
+  const existe = clientes.find(c => c.id !== id && c.tipo_documento === tipoDoc && c.documento === documento);
+  if (existe) {
+    toast(`Ya existe un cliente con identificación: ${tipoDoc}-${documento}`, 'error');
+    return;
+  }
+
+  let cliId = id;
   if(id){
     const idx=clientes.findIndex(c=>c.id===id);
-    if(idx>=0) Object.assign(clientes[idx],{nombre,tipo_documento:document.getElementById('cli-tipo-doc').value||null,documento:document.getElementById('cli-documento').value||null,telefono:document.getElementById('cli-telefono').value,email:document.getElementById('cli-email').value,vigencia_hasta:document.getElementById('cli-vigencia').value||null,autorizado:document.getElementById('cli-autorizado').checked,notas:document.getElementById('cli-notas').value});
+    if(idx>=0) {
+      Object.assign(clientes[idx], {
+        nombre, nombres, apellidos, razon_social, tipo_documento: tipoDoc, documento,
+        direccion, telefono, email, vigencia_hasta, autorizado, notas
+      });
+    }
   } else {
-    clientes.push({id:genId('cl'),tipo:'activo',nombre,tipo_documento:document.getElementById('cli-tipo-doc').value||null,documento:document.getElementById('cli-documento').value||null,telefono:document.getElementById('cli-telefono').value,email:document.getElementById('cli-email').value,notas:document.getElementById('cli-notas').value,autorizado:document.getElementById('cli-autorizado').checked,vigencia_hasta:document.getElementById('cli-vigencia').value||null,paquete_actual:null,sesiones_disponibles:0,sesiones_induccion:0,sesiones_induccion_realizada:false,sesiones_usadas:0,historial_sesiones:[]});
+    cliId = genId('cl');
+    const nuevo = {
+      id: cliId,
+      tipo: 'pre_cliente', // Empieza como pre-cliente hasta que registre facturas
+      nombre, nombres, apellidos, razon_social, tipo_documento: tipoDoc, documento,
+      direccion, telefono, email, vigencia_hasta, autorizado, notas,
+      paquete_actual: null, sesiones_disponibles: 0, sesiones_usadas: 0, sesiones_induccion: 0,
+      sesiones_induccion_realizada: false, historial_sesiones: []
+    };
+    clientes.push(nuevo);
+    
+    // Auto-crear nadador Principal si es Persona Natural
+    if (tipoDoc !== 'NIT') {
+      const nadadores = DB.getNadadores();
+      nadadores.push({
+        id: genId('nad'),
+        tipo_documento: tipoDoc,
+        documento,
+        nombres,
+        apellidos,
+        fecha_nacimiento: '',
+        genero: 'No Responde',
+        email,
+        telefono,
+        direccion,
+        nada_desde: '',
+        asociaciones: [
+          { cliente_id: cliId, rol: 'Principal', autorizado: true }
+        ]
+      });
+      DB.saveNadadores(nadadores);
+    }
   }
-  DB.saveClientes(clientes);cerrarModal();renderClientes();actualizarBadges();toast(id?'Cliente actualizado':'Cliente creado','success');
+  
+  DB.saveClientes(clientes);
+  cerrarModal();
+  renderClientes();
+  actualizarBadges();
+  toast(id?'Cliente actualizado':'Cliente creado','success');
+  registrarAuditoria(id ? 'editar_cliente' : 'crear_cliente', `Cliente ${nombre} (${tipoDoc}-${documento}) guardado.`);
 }
 
 function eliminarCliente(id){
   const cli=getClienteById(id);
-  mostrarModal('🗑 Eliminar cliente',`¿Eliminar a <strong>${cli?.nombre}</strong>? Sus reservas permanecerán.`,'Eliminar','Cancelar',()=>{
+  mostrarModal('🗑 Eliminar cliente',`¿Eliminar a <strong>${getNombreCliente(cli)}</strong>? Sus reservas permanecerán.`,'Eliminar','Cancelar',()=>{
     DB.saveClientes(DB.getClientes().filter(c=>c.id!==id));renderClientes();actualizarBadges();toast('Cliente eliminado.','success');
   });
 }
@@ -2362,57 +2940,120 @@ function eliminarCliente(id){
 function abrirFichaCliente(id){
   const cli=getClienteById(id);if(!cli) return;
   const reservas=DB.getReservas().filter(r=>r.cliente_id===id).sort((a,b)=>b.fecha.localeCompare(a.fecha));
-  const total=reservas.length;const asist=reservas.filter(r=>r.estado==='asistio').length;
-  const noShow=reservas.filter(r=>r.estado==='no_show').length;const cancel=reservas.filter(r=>r.estado==='cancelado').length;
-  const pctA=total>0?Math.round(asist/total*100):0;
+  
+  // Consolidación de sesiones v2.1
+  const lotesCli = DB.getLotes().filter(l => l.cliente_id === id);
+  const sesionesCli = DB.getSesiones().filter(s => s.cliente_id === id);
+  
+  let compr = 0, disp = 0, reserv = 0, usd = 0, ns = 0, venc = 0;
+  const usaV2 = lotesCli.length > 0 || sesionesCli.length > 0;
+  
+  if (usaV2) {
+    compr = lotesCli.reduce((sum, l) => sum + (l.cantidad_sesiones || 0), 0);
+    disp = sesionesCli.filter(s => s.estado === 'DISPONIBLE').length;
+    reserv = sesionesCli.filter(s => s.estado === 'RESERVADA').length;
+    usd = sesionesCli.filter(s => s.estado === 'USADA').length;
+    ns = sesionesCli.filter(s => s.estado === 'NO-SHOW').length;
+    venc = sesionesCli.filter(s => s.estado === 'VENCIDA').length;
+  } else {
+    // Fallback era anterior
+    disp = cli.sesiones_disponibles || 0;
+    usd = cli.sesiones_usadas || 0;
+    compr = disp + usd;
+  }
+
+  const total = reservas.length;
+  const asist = reservas.filter(r=>r.estado==='asistio').length;
+  const noShow = reservas.filter(r=>r.estado==='no_show').length;
+  const pctA = total > 0 ? Math.round(asist/total*100) : 0;
   const paqColor={PLATA:'pk-plata',ORO:'pk-oro',DIAMANTE:'pk-diamante',BLACK:'pk-black',INDIVIDUAL:'pk-individual'};
   const histSes=(cli.historial_sesiones||[]).slice(-10).reverse();
 
-  document.getElementById('modal-title').innerHTML=`👤 Ficha — ${cli.nombre}`;
+  // Obtener nadadores asociados
+  const nadadoresAsocs = DB.getNadadores().filter(n => n.asociaciones.some(a => a.cliente_id === id));
+
+  document.getElementById('modal-title').innerHTML=`👤 Ficha — ${getNombreCliente(cli)}`;
   document.getElementById('modal-body').innerHTML=`
-    <!-- Sesiones -->
+    <!-- Balance Consolidado -->
     <div class="session-card" style="margin-bottom:14px">
       <div class="session-card-header">
         <div>
           ${cli.paquete_actual?`<span class="paquete-badge ${paqColor[cli.paquete_actual]||''}">${cli.paquete_actual}</span>`:''}
-          <div style="font-size:1.5rem;font-weight:800;color:var(--azul);margin-top:4px">${cli.sesiones_disponibles||0}</div>
+          <div style="font-size:1.5rem;font-weight:800;color:var(--azul);margin-top:4px">${disp}</div>
           <div class="text-sm text-muted">sesiones disponibles</div>
           ${(cli.sesiones_induccion||0)>0?`<div class="induccion-pill mt-8">🎓 Inducción disponible</div>`:''}
-          ${cli.sesiones_induccion_realizada?'<div class="text-sm text-muted mt-8">🎓 Inducción: realizada</div>':''}
         </div>
         <div style="text-align:right">
-          <div class="text-sm text-muted">${cli.sesiones_usadas||0} usadas</div>
-          ${isAdmin()?`<button class="btn btn-purple btn-xs mt-8" onclick="abrirAjusteAdmin('${id}')">🔐 Ajustar sesiones</button>`:''}
+          <div class="text-sm text-muted">Adquiridas: <strong>${compr}</strong></div>
+          <div class="text-sm text-muted">Reservadas: <strong>${reserv}</strong></div>
+          <div class="text-sm text-muted">Usadas: <strong>${usd}</strong></div>
+          <div class="text-sm text-muted">No-Show: <strong>${ns}</strong></div>
+          <div class="text-sm text-muted">Vencidas: <strong>${venc}</strong></div>
         </div>
       </div>
-      ${cli.paquete_actual?`<div class="session-progress"><div class="session-progress-bar${(cli.sesiones_disponibles||0)<=2?' danger':(cli.sesiones_disponibles||0)<=5?' warning':''}" style="width:${Math.min(100,Math.round((cli.sesiones_disponibles||0)/Math.max(1,(cli.sesiones_disponibles||0)+(cli.sesiones_usadas||0))*100))}%"></div></div>`:''}
     </div>
-    <!-- Datos básicos -->
+    
+    <!-- Datos Básicos -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">
-      <div class="ficha-stat"><span class="ficha-stat-label">Documento</span><span class="ficha-stat-value">${cli.tipo_documento||'—'} ${cli.documento||''}</span></div>
+      <div class="ficha-stat"><span class="ficha-stat-label">Identificación</span><span class="ficha-stat-value">${cli.tipo_documento||''} ${cli.documento||''}</span></div>
       <div class="ficha-stat"><span class="ficha-stat-label">Teléfono</span><span class="ficha-stat-value">${cli.telefono||'—'}</span></div>
-      <div class="ficha-stat"><span class="ficha-stat-label">Vigencia</span><span class="ficha-stat-value">${formatFecha(cli.vigencia_hasta)}</span></div>
-      <div class="ficha-stat"><span class="ficha-stat-label">Estado</span><span>${getBadgeAuth(cli)}</span></div>
+      <div class="ficha-stat"><span class="ficha-stat-label">Email</span><span class="ficha-stat-value" style="font-size:0.75rem">${cli.email||'—'}</span></div>
+      <div class="ficha-stat"><span class="ficha-stat-label">Vigencia</span><span class="ficha-stat-value">${cli.vigencia_hasta?formatFecha(cli.vigencia_hasta):'—'}</span></div>
     </div>
-    <!-- Estadísticas -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;text-align:center">
-      <div><div style="font-size:1.2rem;font-weight:700;color:var(--azul)">${total}</div><div class="text-sm text-muted">Total</div></div>
-      <div><div style="font-size:1.2rem;font-weight:700;color:var(--verde)">${asist}</div><div class="text-sm text-muted">Asistió</div></div>
-      <div><div style="font-size:1.2rem;font-weight:700;color:var(--rojo)">${noShow}</div><div class="text-sm text-muted">No show</div></div>
-      <div><div style="font-size:1.2rem;font-weight:700;color:var(--azul-medio)">${pctA}%</div><div class="text-sm text-muted">Asistencia</div></div>
+
+    <!-- Gestión de Nadadores -->
+    <div class="text-sm fw-600 text-muted mb-8" style="display:flex;justify-content:between;align-items:center">
+      <span>Nadadores vinculados:</span>
+      <button class="btn btn-purple btn-xs" onclick="cerrarModal(); abrirAsociarNadador('${id}')">➕ Vincular</button>
     </div>
-    <!-- Historial reservas -->
-    <div class="text-sm fw-600 text-muted mb-8">Historial de reservas:</div>
-    <div style="max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:14px">
-      ${reservas.length?reservas.slice(0,15).map(r=>{
+    <div style="border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:14px;background:rgba(255,255,255,0.01)">
+      ${nadadoresAsocs.length ? nadadoresAsocs.map(n => {
+        const asoc = n.asociaciones.find(a => a.cliente_id === id);
+        return `<div class="festivo-row text-sm" style="padding:4px 6px">
+          <span><strong>${n.nombres} ${n.apellidos}</strong> (${asoc.rol})</span>
+          <span>Reserva: ${asoc.autorizado ? '✔️ Autorizado' : '❌ Bloqueado'}</span>
+        </div>`;
+      }).join('') : '<div class="text-center text-muted text-sm">Sin nadadores vinculados. Agrega uno.</div>'}
+    </div>
+
+    <!-- Desglose por Lotes de Compra -->
+    ${usaV2 ? `
+      <div class="text-sm fw-600 text-muted mb-8">Lotes de compra (Facturas):</div>
+      <div style="max-height:150px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:14px;background:rgba(255,255,255,0.01)">
+        ${lotesCli.map(l => {
+          const lSess = sesionesCli.filter(s => s.lote_id === l.id);
+          const act = l.fecha_activacion ? formatFecha(l.fecha_activacion) : 'Sin activar';
+          const ven = l.fecha_vencimiento ? formatFecha(l.fecha_vencimiento) : 'Pendiente';
+          const dispL = lSess.filter(s => s.estado === 'DISPONIBLE').length;
+          const reservL = lSess.filter(s => s.estado === 'RESERVADA').length;
+          const usdL = lSess.filter(s => s.estado === 'USADA').length;
+          
+          return `<div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:0.8rem">
+            <div style="display:flex;justify-content:space-between">
+              <strong>${l.factura}</strong> (${l.paquete_nombre})
+              <span>Disp: <strong>${dispL}</strong> | Res: <strong>${reservL}</strong> | Usadas: <strong>${usdL}</strong></span>
+            </div>
+            <div class="text-muted text-xs mt-4">Act: ${act} · Vence: ${ven} (${l.estado_vigencia.toUpperCase()})</div>
+          </div>`;
+        }).join('')}
+      </div>
+    ` : ''}
+
+    <!-- Historial Reservas -->
+    <div class="text-sm fw-600 text-muted mb-8">Últimas reservas:</div>
+    <div style="max-height:130px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:14px">
+      ${reservas.length?reservas.slice(0,10).map(r=>{
         const c=getCarrilById(r.carril_id);
+        const nad = DB.getNadadores().find(n => n.id === r.nadador_id);
+        const nameNad = nad ? ` (${nad.nombres})` : '';
         const icons={reservado:'🔵',asistio:'✅',no_show:'❌',cancelado:'🚫'};
-        return `<div class="festivo-row text-sm" style="padding:7px 12px"><span>${formatFecha(r.fecha)} ${r.hora_inicio} · ${c?.nombre||'?'} ${r.tipo_sesion==='induccion'?'🎓':''}</span><span>${icons[r.estado]||''} ${r.estado.replace('_',' ')}</span></div>`;
+        return `<div class="festivo-row text-sm" style="padding:6px 12px"><span>${formatFecha(r.fecha)} ${r.hora_inicio} · ${c?.nombre||'?'}${nameNad}</span><span>${icons[r.estado]||''} ${r.estado.replace('_',' ')}</span></div>`;
       }).join(''):'<div class="no-data">Sin reservas registradas</div>'}
     </div>
+    
     <!-- Historial de sesiones -->
-    <div class="text-sm fw-600 text-muted mb-8">Movimientos de sesiones:</div>
-    <div style="max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">
+    <div class="text-sm fw-600 text-muted mb-8">Movimientos de cuenta:</div>
+    <div style="max-height:130px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">
       ${histSes.length?histSes.map(m=>{
         const iconMap={carga:'hist-carga',consumo:'hist-consumo',consumo_induccion:'hist-consumo',devolucion:'hist-devolucion',devolucion_induccion:'hist-devolucion',ajuste_admin:'hist-ajuste'};
         const lMap={carga:'➕',consumo:'➖',consumo_induccion:'➖',devolucion:'↩️',devolucion_induccion:'↩️',ajuste_admin:'🔐'};
@@ -2430,9 +3071,426 @@ function abrirFichaCliente(id){
   document.getElementById('modal-footer').innerHTML=`
     <button class="btn btn-secondary" onclick="cerrarModal()">Cerrar</button>
     <button class="btn btn-primary" onclick="cerrarModal();abrirEditarCliente('${id}')">✏️ Editar</button>
-    ${getEstadoAuth(cli)==='vencido'?`<button class="btn btn-success btn-sm" onclick="autorizarManual('${id}')">🔓 Autorizar</button>`:''}
+    ${isAdmin()?`<button class="btn btn-purple btn-sm" onclick="cerrarModal();abrirAjusteAdmin('${id}')">🔐 Ajustar saldo</button>`:''}
   `;
   document.getElementById('modal-overlay').classList.add('active');
+}
+
+// ----------------------------------------------------------------
+// SUBMÓDULO NADADORES v2.1
+// ----------------------------------------------------------------
+let filtroNadador = 'todos';
+function setFiltroNadador(filter) {
+  filtroNadador = filter;
+  document.querySelectorAll('#container-nadadores .filter-chip').forEach(e => e.classList.remove('active'));
+  document.getElementById(`f-nad-${filter}`).classList.add('active');
+  renderNadadores();
+}
+
+function filtrarNadadores(){renderNadadores();}
+
+function renderNadadores() {
+  const nadadores = DB.getNadadores();
+  const q = document.getElementById('search-nadadores')?.value?.toLowerCase() || '';
+  let filtered = nadadores;
+  
+  if (q) {
+    filtered = filtered.filter(n => 
+      (n.nombres + ' ' + n.apellidos).toLowerCase().includes(q) || 
+      n.documento.includes(q)
+    );
+  }
+  
+  if (filtroNadador === 'adultos') {
+    filtered = filtered.filter(n => calcularEdadYMenor(n.fecha_nacimiento).edad >= 18);
+  } else if (filtroNadador === 'menores') {
+    filtered = filtered.filter(n => calcularEdadYMenor(n.fecha_nacimiento).edad < 18);
+  }
+  
+  const tbody = document.getElementById('tabla-nadadores');
+  const noData = document.getElementById('no-nadadores');
+  if (!tbody) return;
+  
+  if (filtered.length === 0) {
+    tbody.innerHTML = '';
+    noData.style.display = 'block';
+    return;
+  }
+  noData.style.display = 'none';
+  
+  const clientes = DB.getClientes();
+  const cliMap = {};
+  clientes.forEach(c => { cliMap[c.id] = c; });
+  
+  tbody.innerHTML = filtered.map(n => {
+    const { edad, menorDeEdad } = calcularEdadYMenor(n.fecha_nacimiento);
+    const edadStr = edad !== null ? `${edad} años` : '—';
+    const menorBadge = menorDeEdad === 'Sí' ? '<span class="badge badge-red">Menor</span>' : '<span class="badge badge-green">Adulto</span>';
+    
+    const asocs = (n.asociaciones || []).map(a => {
+      const c = cliMap[a.cliente_id];
+      if (!c) return '';
+      const rolBadge = a.rol === 'Principal' ? '🔑 Principal' : '👥 Invitado';
+      const authStr = a.autorizado ? '✔️' : '❌';
+      return `<div style="font-size:0.78rem; margin-bottom:2px">${getNombreCliente(c)} (${rolBadge}, Aut: ${authStr})</div>`;
+    }).filter(Boolean).join('');
+    
+    return `<tr>
+      <td><span style="font-weight:600">${n.nombres} ${n.apellidos}</span></td>
+      <td>${n.tipo_documento} ${n.documento}</td>
+      <td>${edadStr} ${menorBadge}</td>
+      <td>${n.nada_desde || '—'}</td>
+      <td>${n.genero}</td>
+      <td>${asocs || '<span class="text-muted">Sin asociación</span>'}</td>
+      <td>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-secondary btn-xs" onclick="abrirFichaNadador('${n.id}')">Ficha</button>
+          <button class="btn btn-secondary btn-xs" onclick="abrirFormNadador('${n.id}')">Editar</button>
+          <button class="btn btn-danger btn-xs" onclick="eliminarNadador('${n.id}')">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function abrirFormNadador(id) {
+  const nad = id ? DB.getNadadores().find(n => n.id === id) : null;
+  
+  document.getElementById('modal-title').innerHTML = nad ? '✏️ Editar nadador' : '➕ Nuevo nadador';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Nombres *</label><input type="text" class="form-control" id="nad-nombres" value="${nad ? nad.nombres : ''}"></div>
+      <div class="form-group"><label class="form-label">Apellidos *</label><input type="text" class="form-control" id="nad-apellidos" value="${nad ? nad.apellidos : ''}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Tipo documento *</label>
+        <select class="form-control" id="nad-tipo-doc">
+          <option value="CC" ${nad?.tipo_documento === 'CC' ? 'selected' : ''}>CC</option>
+          <option value="TI" ${nad?.tipo_documento === 'TI' ? 'selected' : ''}>TI</option>
+          <option value="CE" ${nad?.tipo_documento === 'CE' ? 'selected' : ''}>CE</option>
+          <option value="NIT" ${nad?.tipo_documento === 'NIT' ? 'selected' : ''}>NIT</option>
+          <option value="PAS" ${nad?.tipo_documento === 'PAS' ? 'selected' : ''}>PAS</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Documento *</label><input type="text" class="form-control" id="nad-documento" value="${nad?.documento || ''}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Fecha de Nacimiento *</label><input type="date" class="form-control" id="nad-nacimiento" value="${nad?.fecha_nacimiento || ''}"></div>
+      <div class="form-group">
+        <label class="form-label">Género</label>
+        <select class="form-control" id="nad-genero">
+          <option value="Hombre" ${nad?.genero === 'Hombre' ? 'selected' : ''}>Hombre</option>
+          <option value="Mujer" ${nad?.genero === 'Mujer' ? 'selected' : ''}>Mujer</option>
+          <option value="No Responde" ${nad?.genero === 'No Responde' ? 'selected' : ''}>No Responde</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-control" id="nad-email" value="${nad?.email || ''}"></div>
+      <div class="form-group"><label class="form-label">Teléfono</label><input type="text" class="form-control" id="nad-telefono" value="${nad?.telefono || ''}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Dirección</label><input type="text" class="form-control" id="nad-direccion" value="${nad?.direccion || ''}"></div>
+      <div class="form-group"><label class="form-label">Nada Desde (Año)</label><input type="number" class="form-control" id="nad-nada-desde" value="${nad?.nada_desde || ''}"></div>
+    </div>
+    
+    <div class="text-sm fw-600 text-muted mt-14 mb-8">Asociaciones con Clientes Titulares:</div>
+    <div id="nad-asociaciones-container" style="border:1px solid var(--border);border-radius:8px;padding:12px;background:rgba(255,255,255,0.01)">
+      <div id="nad-asociaciones-list">
+        <!-- Rows will be added dynamically -->
+      </div>
+      <button class="btn btn-secondary btn-xs mt-8" type="button" onclick="agregarFilaAsociacion()">➕ Agregar Asociación</button>
+    </div>
+  `;
+  
+  const asociaciones = nad?.asociaciones || [];
+  asociaciones.forEach(asc => agregarFilaAsociacion(asc));
+  if (asociaciones.length === 0) {
+    agregarFilaAsociacion();
+  }
+  
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="guardarNadador('${id || ''}')">💾 Guardar</button>
+  `;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
+function agregarFilaAsociacion(asc = null) {
+  const list = document.getElementById('nad-asociaciones-list');
+  const clientes = DB.getClientes();
+  const rowId = 'asc_row_' + Math.random().toString(36).slice(2, 6);
+  
+  const options = clientes.map(c => `<option value="${c.id}" ${asc?.cliente_id === c.id ? 'selected' : ''}>${getNombreCliente(c)} (${c.tipo_documento}-${c.documento})</option>`).join('');
+  
+  const div = document.createElement('div');
+  div.id = rowId;
+  div.className = 'form-row';
+  div.style.alignItems = 'center';
+  div.style.marginBottom = '6px';
+  div.innerHTML = `
+    <div class="form-group" style="margin-bottom:0">
+      <select class="form-control select-cli-asoc" style="font-size:0.85rem">
+        <option value="">-- Seleccionar Cliente --</option>
+        ${options}
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <select class="form-control select-rol-asoc" style="font-size:0.85rem">
+        <option value="Invitado" ${asc?.rol === 'Invitado' ? 'selected' : ''}>Invitado</option>
+        <option value="Principal" ${asc?.rol === 'Principal' ? 'selected' : ''}>Principal</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:0;display:flex;align-items:center;gap:6px;padding-top:0">
+      <label class="toggle-switch" style="transform:scale(0.85)"><input type="checkbox" class="chk-auth-asoc" ${asc ? (asc.autorizado ? 'checked' : '') : 'checked'}><span class="toggle-slider"></span></label>
+      <span style="font-size:0.8rem">Autorizado</span>
+    </div>
+    <div style="margin-bottom:0">
+      <button class="btn btn-danger btn-xs" type="button" onclick="document.getElementById('${rowId}').remove()">🗑</button>
+    </div>
+  `;
+  list.appendChild(div);
+}
+
+function guardarNadador(id) {
+  const nombres = document.getElementById('nad-nombres').value.trim();
+  const apellidos = document.getElementById('nad-apellidos').value.trim();
+  const tipoDoc = document.getElementById('nad-tipo-doc').value;
+  const docNum = document.getElementById('nad-documento').value.trim();
+  const fechaNac = document.getElementById('nad-nacimiento').value;
+  const genero = document.getElementById('nad-genero').value;
+  const email = document.getElementById('nad-email').value.trim();
+  const telefono = document.getElementById('nad-telefono').value.trim();
+  const direccion = document.getElementById('nad-direccion').value.trim();
+  const nadaDesde = document.getElementById('nad-nada-desde').value;
+  
+  if(!nombres || !apellidos || !tipoDoc || !docNum || !fechaNac) {
+    toast('Nombres, Apellidos, Identificación y Fecha de Nacimiento son requeridos.','error');
+    return;
+  }
+  
+  const nadadores = DB.getNadadores();
+  const existe = nadadores.find(n => n.id !== id && n.tipo_documento === tipoDoc && n.documento === docNum);
+  if (existe) {
+    toast(`Ya existe un nadador con identificación: ${tipoDoc}-${docNum}`, 'error');
+    return;
+  }
+  
+  const asocList = [];
+  const rows = document.querySelectorAll('#nad-asociaciones-list .form-row');
+  
+  for (const r of rows) {
+    const selectorCli = r.querySelector('.select-cli-asoc');
+    if (!selectorCli) continue;
+    const clienteId = selectorCli.value;
+    const rol = r.querySelector('.select-rol-asoc').value;
+    const autorizado = r.querySelector('.chk-auth-asoc').checked;
+    
+    if (clienteId) {
+      if (asocList.some(a => a.cliente_id === clienteId)) {
+        toast('No puedes asociar dos veces al mismo cliente.', 'error');
+        return;
+      }
+      asocList.push({ cliente_id: clienteId, rol, autorizado });
+    }
+  }
+  
+  // Regla: 1 Principal por cliente
+  for (const a of asocList) {
+    if (a.rol === 'Principal') {
+      const otroPrincipal = nadadores.find(n => n.id !== id && n.asociaciones.some(as => as.cliente_id === a.cliente_id && as.rol === 'Principal'));
+      if (otroPrincipal) {
+        const cli = DB.getClientes().find(c => c.id === a.cliente_id);
+        toast(`El cliente ${getNombreCliente(cli)} ya tiene un nadador Principal asignado (${otroPrincipal.nombres} ${otroPrincipal.apellidos}).`, 'error');
+        return;
+      }
+    }
+  }
+  
+  const nadData = {
+    id: id || genId('nad'),
+    tipo_documento: tipoDoc,
+    documento: docNum,
+    nombres,
+    apellidos,
+    fecha_nacimiento: fechaNac,
+    genero,
+    email,
+    telefono,
+    direccion,
+    nada_desde: nadaDesde || null,
+    asociaciones: asocList
+  };
+  
+  if (id) {
+    const idx = nadadores.findIndex(n => n.id === id);
+    if (idx >= 0) nadadores[idx] = nadData;
+  } else {
+    nadadores.push(nadData);
+  }
+  
+  DB.saveNadadores(nadadores);
+  cerrarModal();
+  renderNadadores();
+  actualizarBadges();
+  toast(id ? 'Nadador actualizado' : 'Nadador creado', 'success');
+  registrarAuditoria(id ? 'editar_nadador' : 'crear_nadador', `Nadador ${nombres} ${apellidos} (${tipoDoc}-${docNum}) guardado.`);
+}
+
+function abrirFichaNadador(id) {
+  const nad = DB.getNadadores().find(n => n.id === id);
+  if (!nad) return;
+  
+  const { edad, menorDeEdad } = calcularEdadYMenor(nad.fecha_nacimiento);
+  const edadStr = edad !== null ? `${edad} años` : '—';
+  
+  const reservas = DB.getReservas().filter(r => r.nadador_id === id).sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const clientes = DB.getClientes();
+  const cliMap = {};
+  clientes.forEach(c => { cliMap[c.id] = c; });
+  
+  const asocs = (nad.asociaciones || []).map(a => {
+    const c = cliMap[a.cliente_id];
+    if (!c) return '';
+    return `<div class="ficha-stat"><span class="ficha-stat-label">${getNombreCliente(c)}</span><span class="ficha-stat-value">${a.rol} (Aut: ${a.autorizado ? 'Sí' : 'No'})</span></div>`;
+  }).filter(Boolean).join('');
+  
+  document.getElementById('modal-title').innerHTML = `🏊 Ficha Nadador — ${nad.nombres} ${nad.apellidos}`;
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">
+      <div class="ficha-stat"><span class="ficha-stat-label">Documento</span><span class="ficha-stat-value">${nad.tipo_documento} ${nad.documento}</span></div>
+      <div class="ficha-stat"><span class="ficha-stat-label">Edad / Menor</span><span class="ficha-stat-value">${edadStr} (Menor: ${menorDeEdad})</span></div>
+      <div class="ficha-stat"><span class="ficha-stat-label">Género</span><span class="ficha-stat-value">${nad.genero}</span></div>
+      <div class="ficha-stat"><span class="ficha-stat-label">Nada Desde</span><span class="ficha-stat-value">${nad.nada_desde || '—'}</span></div>
+      <div class="ficha-stat"><span class="ficha-stat-label">Email</span><span class="ficha-stat-value" style="font-size:0.75rem">${nad.email || '—'}</span></div>
+      <div class="ficha-stat"><span class="ficha-stat-label">Teléfono</span><span class="ficha-stat-value">${nad.telefono || '—'}</span></div>
+    </div>
+    
+    <div class="text-sm fw-600 text-muted mb-8">Clientes titulares asociados:</div>
+    <div style="display:grid;grid-template-columns:1fr;gap:4px;margin-bottom:14px">
+      ${asocs || '<div class="no-data">Sin asociaciones</div>'}
+    </div>
+    
+    <div class="text-sm fw-600 text-muted mb-8">Historial de asistencia (Últimas 10):</div>
+    <div style="max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">
+      ${reservas.length ? reservas.slice(0, 10).map(r => {
+        const c = getCarrilById(r.carril_id);
+        const cli = cliMap[r.cliente_id];
+        const icons = { reservado: '🔵', asistio: '✅', no_show: '❌', cancelado: '🚫' };
+        return `<div class="festivo-row text-sm" style="padding:6px 12px">
+          <span>${formatFecha(r.fecha)} ${r.hora_inicio} · ${c?.nombre || '?'} (Cliente: ${getNombreCliente(cli)})</span>
+          <span>${icons[r.estado] || ''} ${r.estado.replace('_', ' ')}</span>
+        </div>`;
+      }).join('') : '<div class="no-data">Sin reservas registradas</div>'}
+    </div>
+  `;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="cerrarModal()">Cerrar</button>
+    <button class="btn btn-primary" onclick="cerrarModal();abrirFormNadador('${id}')">✏️ Editar</button>
+  `;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
+function eliminarNadador(id) {
+  const nad = DB.getNadadores().find(n => n.id === id);
+  if (!nad) return;
+  mostrarModal('🗑 Eliminar nadador', `¿Desvincular por completo a <strong>${nad.nombres} ${nad.apellidos}</strong>?`, 'Eliminar', 'Cancelar', () => {
+    const nadadores = DB.getNadadores().filter(n => n.id !== id);
+    DB.saveNadadores(nadadores);
+    renderNadadores();
+    toast('Nadador eliminado.', 'success');
+    registrarAuditoria('eliminar_nadador', `Nadador ${nad.nombres} ${nad.apellidos} eliminado.`);
+  });
+}
+
+function abrirAsociarNadador(clienteId) {
+  const cli = getClienteById(clienteId);
+  if (!cli) return;
+  
+  const nadadores = DB.getNadadores();
+  // Nadadores que no estén asociados a este cliente aún
+  const libres = nadadores.filter(n => !n.asociaciones.some(a => a.cliente_id === clienteId));
+  
+  const options = libres.map(n => `<option value="${n.id}">${n.nombres} ${n.apellidos} (${n.tipo_documento}-${n.documento})</option>`).join('');
+  
+  document.getElementById('modal-title').innerHTML = `🏊 Vincular Nadador a ${getNombreCliente(cli)}`;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-group">
+      <label class="form-label">Selecciona un Nadador existente</label>
+      <select class="form-control" id="vinc-nad-id">
+        <option value="">-- Crear Nuevo Nadador --</option>
+        ${options}
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Rol de Asociación</label>
+        <select class="form-control" id="vinc-nad-rol">
+          <option value="Invitado">Invitado</option>
+          <option value="Principal">Principal</option>
+        </select>
+      </div>
+      <div class="form-group" style="display:flex;align-items:center;gap:10px;padding-top:20px">
+        <label class="toggle-switch"><input type="checkbox" id="vinc-nad-auth" checked><span class="toggle-slider"></span></label>
+        <span class="form-label" style="margin:0">Autorizado a reservar</span>
+      </div>
+    </div>
+    <div class="alert alert-info mt-8">Si seleccionas crear un nuevo nadador, se abrirá el formulario completo al darle guardar.</div>
+  `;
+  
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="cerrarModal(); abrirFichaCliente('${clienteId}')">Atrás</button>
+    <button class="btn btn-primary" onclick="guardarAsociacionNadador('${clienteId}')">Vincular</button>
+  `;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
+function guardarAsociacionNadador(clienteId) {
+  const nadId = document.getElementById('vinc-nad-id').value;
+  const rol = document.getElementById('vinc-nad-rol').value;
+  const autorizado = document.getElementById('vinc-nad-auth').checked;
+  
+  if (!nadId) {
+    // Si quiere crear uno nuevo, abrir formulario vacío
+    cerrarModal();
+    abrirFormNadador();
+    // Pre-poblar la asociación si es posible: agregamos el selector
+    setTimeout(() => {
+      const select = document.querySelector('#nad-asociaciones-list .select-cli-asoc');
+      if (select) {
+        select.value = clienteId;
+        const rSelect = document.querySelector('#nad-asociaciones-list .select-rol-asoc');
+        if (rSelect) rSelect.value = rol;
+        const chk = document.querySelector('#nad-asociaciones-list .chk-auth-asoc');
+        if (chk) chk.checked = autorizado;
+      }
+    }, 400);
+    return;
+  }
+  
+  const nadadores = DB.getNadadores();
+  const nad = nadadores.find(n => n.id === nadId);
+  if (!nad) return;
+  
+  if (rol === 'Principal') {
+    // Verificar si el cliente ya tiene Principal
+    const otroPrincipal = nadadores.find(n => n.asociaciones.some(as => as.cliente_id === clienteId && as.rol === 'Principal'));
+    if (otroPrincipal) {
+      const cli = DB.getClientes().find(c => c.id === clienteId);
+      toast(`El cliente ya tiene un nadador Principal (${otroPrincipal.nombres} ${otroPrincipal.apellidos}).`, 'error');
+      return;
+    }
+  }
+  
+  if (!nad.asociaciones) nad.asociaciones = [];
+  nad.asociaciones.push({ cliente_id: clienteId, rol, autorizado });
+  
+  DB.saveNadadores(nadadores);
+  cerrarModal();
+  abrirFichaCliente(clienteId);
+  toast('Nadador vinculado correctamente.', 'success');
+  registrarAuditoria('asociar_nadador', `Nadador ${nad.nombres} ${nad.apellidos} vinculado a cliente ${clienteId} como ${rol}`);
 }
 
 function abrirAjusteAdmin(clienteId){
@@ -2607,18 +3665,55 @@ function cargarCSVFacturacion(input){
   const reader=new FileReader();
   reader.onload=e=>{
     const lines=e.target.result.split('\n').map(l=>l.trim()).filter(Boolean);
-    const headers=lines[0].split(',').map(h=>h.replace(/['"]/g,'').trim().toLowerCase());
+    const rawHeaders=parseCSVLine(lines[0]);
+    const headers=rawHeaders.map(h=>h.replace(/['"]/g,'').trim().toLowerCase());
+    
     const docIdx=headers.findIndex(h=>h.includes('documento')||h==='doc');
-    const nomIdx=headers.findIndex(h=>h.includes('nombre'));
-    const paqIdx=headers.findIndex(h=>h.includes('paquete'));
-    const vigIdx=headers.findIndex(h=>h.includes('vigencia'));
-    if(docIdx<0||nomIdx<0){toast('Faltan columnas: documento, nombre.','error');return;}
-    const rows=lines.slice(1).map(l=>{const cols=l.split(',').map(c=>c.replace(/['"]/g,'').trim());return{documento:cols[docIdx],nombre:cols[nomIdx],paquete:paqIdx>=0?cols[paqIdx]:'',vigencia_hasta:vigIdx>=0?cols[vigIdx]:''};}).filter(r=>r.documento||r.nombre);
+    const nomIdx=headers.findIndex(h=>h.includes('nombre')||h==='name');
+    const paqIdx=headers.findIndex(h=>h.includes('paquete')||h==='package'||h==='plan');
+    const facIdx=headers.findIndex(h=>h.includes('factura')||h==='fv'||h==='invoice'||h.includes('numero'));
+    
+    if(docIdx<0||nomIdx<0){toast('Faltan columnas requeridas: documento, nombre.','error');return;}
+    
+    const tipoDocIdx=headers.findIndex(h=>h.includes('tipo')||h.includes('id_type'));
+    const dirIdx=headers.findIndex(h=>h.includes('direccion')||h==='address');
+    const telIdx=headers.findIndex(h=>h.includes('telefono')||h==='phone');
+    const emIdx=headers.findIndex(h=>h.includes('email')||h==='mail');
+    const estIdx=headers.findIndex(h=>h.includes('estado')||h==='state');
+
+    const rows=lines.slice(1).map(l=>{
+      const cols=parseCSVLine(l);
+      const docRaw = (cols[docIdx]||'').replace(/['"]/g,'').trim();
+      let docType = tipoDocIdx>=0 ? (cols[tipoDocIdx]||'').replace(/['"]/g,'').trim().toUpperCase() : 'CC';
+      let docNum = docRaw;
+      
+      // Intentar extraer tipo si viene formateado como CC-123456
+      if (docRaw.includes('-')) {
+        const parts = docRaw.split('-');
+        if (['CC','TI','CE','NIT','PAS'].includes(parts[0].toUpperCase())) {
+          docType = parts[0].toUpperCase();
+          docNum = parts[1];
+        }
+      }
+      
+      return {
+        documento: docNum,
+        tipo_documento: docType,
+        nombre: nomIdx>=0 ? (cols[nomIdx]||'').replace(/['"]/g,'').trim() : '',
+        paquete: paqIdx>=0 ? (cols[paqIdx]||'').replace(/['"]/g,'').trim() : '',
+        factura: facIdx>=0 ? (cols[facIdx]||'').replace(/['"]/g,'').trim() : ('FV-' + Date.now() + Math.random().toString(36).slice(2,5)),
+        direccion: dirIdx>=0 ? (cols[dirIdx]||'').replace(/['"]/g,'').trim() : '',
+        telefono: telIdx>=0 ? (cols[telIdx]||'').replace(/['"]/g,'').trim() : '',
+        email: emIdx>=0 ? (cols[emIdx]||'').replace(/['"]/g,'').trim() : '',
+        estado_factura: estIdx>=0 ? (cols[estIdx]||'').replace(/['"]/g,'').trim().toLowerCase() : 'cobrada'
+      };
+    }).filter(r=>r.documento||r.nombre);
+
     const preview=document.getElementById('fact-preview');preview.style.display='block';
     preview.innerHTML=`
-      <div class="alert alert-info mt-14">Preview — primeras 10 de ${rows.length} filas:</div>
-      <div class="preview-wrap"><table class="data-table"><thead><tr><th>Documento</th><th>Nombre</th><th>Paquete</th><th>Vigencia</th></tr></thead>
-      <tbody>${rows.slice(0,10).map(r=>`<tr><td>${r.documento}</td><td>${r.nombre}</td><td>${r.paquete}</td><td>${r.vigencia_hasta}</td></tr>`).join('')}</tbody></table></div>
+      <div class="alert alert-info mt-14">Vista previa — primeras 10 de ${rows.length} facturas:</div>
+      <div class="preview-wrap"><table class="data-table"><thead><tr><th>Factura</th><th>Documento</th><th>Nombre</th><th>Paquete</th><th>Estado</th></tr></thead>
+      <tbody>${rows.slice(0,10).map(r=>`<tr><td>${r.factura}</td><td>${r.tipo_documento}-${r.documento}</td><td>${r.nombre}</td><td>${r.paquete}</td><td>${r.estado_factura}</td></tr>`).join('')}</tbody></table></div>
       <div style="margin-top:12px;text-align:right"><button class="btn btn-primary" onclick="procesarImportFact(${JSON.stringify(rows).replace(/</g,'&lt;')},'${file.name}')">✅ Procesar importación</button></div>
     `;
   };reader.readAsText(file);
@@ -2629,51 +3724,238 @@ function procesarImportFact(rows,filename){
     toast('🔒 Solo el administrador puede procesar importaciones.','error');
     return;
   }
+  
   const clientes=DB.getClientes();
+  const lotes=DB.getLotes();
+  const sesiones=DB.getSesiones();
+  const reservas=DB.getReservas();
   const cfgPaq=DB.getConfig().paquetes||PAQUETES_DEFAULT;
-  let actualizados=0,nuevos=0;const errores=[];
+  
+  let actualizados=0, nuevos=0, anulados=0;
+  const errores=[];
+  
   for(const row of rows){
-    if(!row.vigencia_hasta||!row.vigencia_hasta.match(/^\d{4}-\d{2}-\d{2}$/)){
-      errores.push({row,motivo:'Fecha inválida: '+row.vigencia_hasta});continue;
-    }
-    const paq=row.paquete?cfgPaq.find(p=>p.nombre.toUpperCase()===row.paquete.toUpperCase()):null;
-    let cli=clientes.find(c=>c.documento===row.documento);
-    if(cli){
-      // Actualizar
-      cli.autorizado=true;cli.vigencia_hasta=row.vigencia_hasta;
-      if(paq){
-        const esRenovacion=cli.sesiones_induccion_realizada;
-        cli.paquete_actual=paq.nombre;
-        cli.sesiones_disponibles=(cli.sesiones_disponibles||0)+paq.sesiones;
-        if(paq.incluye_induccion&&!esRenovacion){cli.sesiones_induccion=1;}
-        if(!cli.historial_sesiones) cli.historial_sesiones=[];
-        cli.historial_sesiones.push({id:genId('m'),fecha:new Date().toISOString(),tipo:'carga',cantidad:paq.sesiones,saldo_resultante:cli.sesiones_disponibles,motivo:`Paquete ${paq.nombre} cargado via importación${esRenovacion?' (renovación - sin inducción)':''}`,es_admin:false,reserva_id:null});
-        if(paq.incluye_induccion&&!esRenovacion) cli.historial_sesiones.push({id:genId('m'),fecha:new Date().toISOString(),tipo:'carga',cantidad:1,saldo_resultante:1,motivo:`Sesión de inducción incluida en paquete ${paq.nombre}`,es_admin:false,reserva_id:null});
+    const facturaNum = row.factura;
+    const isAnulada = ['anulada','anulado','cancelada','cancelado','reversada','reversado'].includes(row.estado_factura);
+    
+    // Buscar si el lote ya existe
+    const loteIdx = lotes.findIndex(l => l.factura === facturaNum);
+    const loteExistente = loteIdx >= 0 ? lotes[loteIdx] : null;
+    
+    if (isAnulada) {
+      if (loteExistente) {
+        // Regla 17: Factura anulada
+        loteExistente.estado_vigencia = 'anulado';
+        
+        // Cancelar sesiones asociadas
+        const sIds = sesiones.filter(s => s.lote_id === loteExistente.id);
+        sIds.forEach(s => {
+          if (s.estado === 'DISPONIBLE') {
+            s.estado = 'ANULADA';
+          } else if (s.estado === 'RESERVADA') {
+            s.estado = 'ANULADA';
+            // Cancelar reserva futura asociada
+            const resObj = reservas.find(r => r.id === s.reserva_id);
+            if (resObj && resObj.estado !== 'cancelado') {
+              resObj.estado = 'cancelado';
+              registrarAuditoria('cancelacion_automatica_reserva', `Reserva ${resObj.id} cancelada automáticamente por anulación de factura ${facturaNum}.`);
+            }
+          } else if (s.estado === 'USADA' || s.estado === 'NO-SHOW') {
+            // No revertir automáticamente, disparar alerta
+            registrarAuditoria('alerta_factura_anulada', `ALERTA: La factura ${facturaNum} fue anulada en Alegra, pero la sesión ${s.codigo} ya tiene estado ${s.estado}.`);
+          }
+        });
+        
+        anulados++;
+        registrarAuditoria('anular_factura', `Factura ${facturaNum} anulada. Lote e inventario cancelado.`);
+      } else {
+        errores.push({ row, motivo: `Factura ${facturaNum} viene anulada pero no existe lote previo en el sistema.` });
       }
+      continue;
+    }
+    
+    // Idempotencia: Si no es anulada y el lote ya existe, conciliar / ignorar
+    if (loteExistente) {
+      errores.push({ row, motivo: `La factura ${facturaNum} ya fue procesada anteriormente.` });
+      continue;
+    }
+    
+    // Resolver cliente
+    const paq=row.paquete?cfgPaq.find(p=>p.nombre.toUpperCase()===row.paquete.toUpperCase()):null;
+    let cli=clientes.find(c=>c.tipo_documento===row.tipo_documento && c.documento===row.documento);
+    
+    if(cli){
+      // Sincronización de Clientes: Datos provenientes de Alegra tienen prioridad
+      cli.autorizado=true;
+      if (row.direccion) cli.direccion = row.direccion;
+      if (row.telefono) cli.telefono = row.telefono;
+      if (row.email) cli.email = row.email;
+      
+      // Si era pre_cliente, ahora es activo
+      if (cli.tipo === 'pre_cliente') cli.tipo = 'activo';
+      
+      if (cli.tipo_documento !== 'NIT' && row.nombre) {
+        // Actualizar nombres/apellidos
+        const parts = row.nombre.split(' ');
+        cli.nombres = parts[0] || '';
+        cli.apellidos = parts.slice(1).join(' ') || '';
+        cli.nombre = row.nombre;
+      } else if (row.nombre) {
+        cli.razon_social = row.nombre;
+        cli.nombre = row.nombre;
+      }
+      
+      cli.paquete_actual=paq?paq.nombre:row.paquete;
       actualizados++;
     } else {
-      // Crear nuevo
-      const nuevoCliente={id:genId('cl'),tipo:'activo',nombre:row.nombre||'Sin nombre',tipo_documento:'CC',documento:row.documento,telefono:'',email:'',notas:'',autorizado:true,vigencia_hasta:row.vigencia_hasta,paquete_actual:paq?paq.nombre:null,sesiones_disponibles:paq?paq.sesiones:0,sesiones_induccion:paq&&paq.incluye_induccion?1:0,sesiones_induccion_realizada:false,sesiones_usadas:0,historial_sesiones:[]};
-      if(paq){
-        nuevoCliente.historial_sesiones.push({id:genId('m'),fecha:new Date().toISOString(),tipo:'carga',cantidad:paq.sesiones,saldo_resultante:paq.sesiones,motivo:`Paquete ${paq.nombre} cargado`,es_admin:false,reserva_id:null});
-        if(paq.incluye_induccion) nuevoCliente.historial_sesiones.push({id:genId('m'),fecha:new Date().toISOString(),tipo:'carga',cantidad:1,saldo_resultante:1,motivo:`Sesión de inducción incluida`,es_admin:false,reserva_id:null});
+      // Crear nuevo cliente activo
+      let nombres = '', apellidos = '', razon_social = '';
+      if (row.tipo_documento !== 'NIT') {
+        const parts = row.nombre.split(' ');
+        nombres = parts[0] || '';
+        apellidos = parts.slice(1).join(' ') || '';
+      } else {
+        razon_social = row.nombre;
       }
-      clientes.push(nuevoCliente);nuevos++;
+      
+      const newId = genId('cl');
+      cli = {
+        id: newId,
+        tipo: 'activo',
+        nombre: row.nombre || 'Sin nombre',
+        nombres,
+        apellidos,
+        razon_social,
+        tipo_documento: row.tipo_documento,
+        documento: row.documento,
+        direccion: row.direccion,
+        telefono: row.telefono,
+        email: row.email,
+        notas: 'Creado automáticamente vía importación Alegra',
+        autorizado: true,
+        vigencia_hasta: null,
+        paquete_actual: paq ? paq.nombre : row.paquete,
+        sesiones_disponibles: 0,
+        sesiones_usadas: 0,
+        sesiones_induccion: 0,
+        sesiones_induccion_realizada: false,
+        historial_sesiones: []
+      };
+      clientes.push(cli);
+      nuevos++;
+      
+      // Auto-crear nadador Principal si es Natural
+      if (row.tipo_documento !== 'NIT') {
+        const nadadores = DB.getNadadores();
+        nadadores.push({
+          id: genId('nad'),
+          tipo_documento: row.tipo_documento,
+          documento: row.documento,
+          nombres,
+          apellidos,
+          fecha_nacimiento: '',
+          genero: 'No Responde',
+          email: row.email,
+          telefono: row.telefono,
+          direccion: row.direccion,
+          nada_desde: '',
+          asociaciones: [
+            { cliente_id: newId, rol: 'Principal', autorizado: true }
+          ]
+        });
+        DB.saveNadadores(nadadores);
+      }
     }
+    
+    // Generar Lote
+    const loteId = genId('lt');
+    const nuevoLote = {
+      id: loteId,
+      cliente_id: cli.id,
+      factura: facturaNum,
+      paquete_id: paq ? paq.id : 'pk_custom',
+      paquete_nombre: paq ? paq.nombre : (row.paquete || 'PERSONALIZADO'),
+      cantidad_sesiones: paq ? paq.sesiones : 8,
+      fecha_activacion: null,
+      fecha_vencimiento: null,
+      estado_vigencia: 'no_iniciado'
+    };
+    lotes.push(nuevoLote);
+    
+    // Generar Sesiones
+    const numSesiones = nuevoLote.cantidad_sesiones;
+    const esRenovacion = cli.sesiones_induccion_realizada || (sesiones.some(s => s.cliente_id === cli.id && s.estado === 'USADA'));
+    
+    for (let i = 1; i <= numSesiones; i++) {
+      const serialStr = String(i).padStart(3, '0');
+      sesiones.push({
+        id: `ses_${facturaNum}_${serialStr}`,
+        codigo: `${facturaNum}-${serialStr}`,
+        cliente_id: cli.id,
+        lote_id: loteId,
+        estado: 'DISPONIBLE',
+        fecha_vencimiento: null,
+        fecha_consumo: null,
+        nadador_id: null,
+        reserva_id: null,
+        carril_id: null,
+        servicios_adicionales: ''
+      });
+    }
+    
+    // Si incluye inducción y no es renovación, agregamos la sesión de inducción
+    if (paq && paq.incluye_induccion && !esRenovacion) {
+      sesiones.push({
+        id: `ses_${facturaNum}_IND`,
+        codigo: `${facturaNum}-IND`,
+        cliente_id: cli.id,
+        lote_id: loteId,
+        estado: 'DISPONIBLE',
+        fecha_vencimiento: null,
+        fecha_consumo: null,
+        nadador_id: null,
+        reserva_id: null,
+        carril_id: null,
+        servicios_adicionales: 'Sesión de Inducción'
+      });
+      cli.sesiones_induccion = (cli.sesiones_induccion || 0) + 1;
+    }
+    
+    // Auditoría e historial log
+    if (!cli.historial_sesiones) cli.historial_sesiones = [];
+    cli.historial_sesiones.push({
+      id: genId('m'),
+      fecha: new Date().toISOString(),
+      tipo: 'carga',
+      cantidad: numSesiones,
+      saldo_resultante: sesiones.filter(s => s.cliente_id === cli.id && s.estado === 'DISPONIBLE').length,
+      motivo: `Lote ${nuevoLote.factura} (${nuevoLote.paquete_nombre}) cargado via Alegra`,
+      es_admin: false,
+      reserva_id: null
+    });
+    
+    registrarAuditoria('importar_factura', `Factura ${facturaNum} importada para cliente ${cli.nombre}. Creadas ${numSesiones} sesiones.`);
   }
+  
   DB.saveClientes(clientes);
+  DB.saveLotes(lotes);
+  DB.saveSesiones(sesiones);
+  DB.saveReservas(reservas);
+  
   const hist=DB.getFacturacion();
-  hist.unshift({id:genId('imp'),fecha:new Date().toISOString(),archivo:filename,total:rows.length,nuevos,actualizados,errores:errores.length,detalle_errores:errores});
+  hist.unshift({id:genId('imp'),fecha:new Date().toISOString(),archivo:filename,total:rows.length,nuevos,actualizados,anulados,errores:errores.length,detalle_errores:errores});
   DB.saveFacturacion(hist);
+  
   const res=document.getElementById('fact-resultado');res.style.display='block';
   res.innerHTML=`
-    <div class="alert alert-success">✅ ${actualizados} clientes actualizados</div>
+    <div class="alert alert-success">✅ ${actualizados} clientes actualizados / conciliados</div>
     <div class="alert alert-info">➕ ${nuevos} clientes nuevos creados</div>
-    ${errores.length?`<div class="alert alert-warning">⚠️ ${errores.length} errores:<br>${errores.map(x=>`• ${x.row.nombre}: ${x.motivo}`).join('<br>')}</div>`:''}
+    ${anulados > 0 ? `<div class="alert alert-warning">🚫 ${anulados} facturas marcadas como ANULADAS (lotes e inventario cancelados)</div>` : ''}
+    ${errores.length?`<div class="alert alert-warning">⚠️ ${errores.length} filas no procesadas:<br>${errores.map(x=>`• ${x.row.factura || x.row.nombre}: ${x.motivo}`).join('<br>')}</div>`:''}
   `;
   document.getElementById('fact-preview').style.display='none';
   renderEstadoClientes();renderHistorialFact();actualizarBadges();
-  toast(`Importación: ${actualizados} actualizados, ${nuevos} nuevos, ${errores.length} errores`,'success');
+  toast(`Importación Alegra: ${actualizados} act, ${nuevos} nuevos, ${anulados} anuladas, ${errores.length} omitidas`,'success');
 }
 
 function verDetalleImp(id){
@@ -3067,6 +4349,65 @@ function guardarBloqueo(){
 }
 
 function eliminarBloqueo(id){mostrarModal('🗑 Eliminar bloqueo','¿Seguro?','Eliminar','Cancelar',()=>{DB.saveBloqueos(DB.getBloqueos().filter(b=>b.id!==id));renderBloqueos();actualizarBadges();toast('Bloqueo eliminado.','success');});}
+
+function renderAuditoria(){
+  const query = (document.getElementById('buscar-auditoria-input')?.value || '').toLowerCase().trim();
+  const auditoria = DB.getAuditoria();
+  const tbody = document.getElementById('tabla-auditoria');
+  if (!tbody) return;
+  
+  const filtrados = auditoria.filter(a => {
+    if (!query) return true;
+    return (a.accion || '').toLowerCase().includes(query) || 
+           (a.detalles || '').toLowerCase().includes(query) ||
+           (a.usuario || '').toLowerCase().includes(query);
+  });
+  
+  if (filtrados.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="no-data">No hay registros de auditoría que coincidan con la búsqueda.</td></tr>`;
+    return;
+  }
+  
+  tbody.innerHTML = filtrados.map(a => {
+    const fechaStr = new Date(a.fecha).toLocaleString('es-CO');
+    return `<tr>
+      <td class="text-sm font-mono">${fechaStr}</td>
+      <td><span class="badge ${a.usuario==='admin'?'badge-red':'badge-gray'}">${a.usuario}</span></td>
+      <td class="text-sm"><strong>${a.accion}</strong></td>
+      <td class="text-sm text-muted">${a.detalles}</td>
+    </tr>`;
+  }).join('');
+}
+
+function exportarAuditoriaCSV(){
+  if(!isAdmin()){
+    toast('🔒 Solo el administrador puede exportar la auditoría.','error');
+    return;
+  }
+  const auditoria = DB.getAuditoria();
+  if (auditoria.length === 0) {
+    toast('No hay registros de auditoría para exportar.', 'error');
+    return;
+  }
+  const headers = ['Fecha/Hora', 'Usuario', 'Accion', 'Detalles'];
+  const rows = auditoria.map(a => [
+    new Date(a.fecha).toISOString(),
+    a.usuario,
+    a.accion,
+    a.detalles.replace(/"/g, '""')
+  ]);
+  
+  const csvContent = [headers.join(','), ...rows.map(r => r.map(val => `"${val}"`).join(','))].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `auditoria_swimmstudio_${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  toast('Auditoría exportada correctamente.', 'success');
+}
 
 // ----------------------------------------------------------------
 // ----------------------------------------------------------------
@@ -4128,6 +5469,7 @@ document.getElementById('fact-drop-zone').addEventListener('drop',e=>{
   const st=localStorage.getItem('swimm_theme');
   if(st){document.documentElement.setAttribute('data-theme',st);document.getElementById('dark-btn').textContent=st==='dark'?'☀️':'🌙';}
   initDatosEjemplo();
+  procesarVencimientos();
   actualizarHeaderFecha();setInterval(actualizarHeaderFecha,60000);
   const hoy=new Date();
   const ms=document.getElementById('export-csv-mes');if(ms) ms.value=hoy.getMonth()+1;
@@ -4151,7 +5493,7 @@ document.getElementById('fact-drop-zone').addEventListener('drop',e=>{
   if(!pinConfigured&&(!cfg.admin_pin||cfg.admin_pin==='')){
     setTimeout(()=>mostrarSetupPin(),600);
   }
-  console.log('🏊 Swimm Studio v1.1 — Iniciado');
+  console.log('🏊 Swimm Studio v2.1 — Iniciado');
 })();
 </script>
 </body>
