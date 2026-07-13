@@ -23,7 +23,7 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Swimm Studio — Sistema de Reservas v3.1</title>
+<title>Swimm Studio — Sistema de Reservas v3.12</title>
 <meta name="description" content="Sistema de reservas para carriles de natación Swimm Studio. Gestión de clientes, sesiones, facturación y estadísticas.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -500,7 +500,7 @@ textarea.form-control{resize:vertical;min-height:70px}
     </div>
     <div class="sidebar-footer" style="padding: 12px 18px; border-top: 1px solid rgba(255,255,255,0.05); overflow: hidden; display: flex; align-items: center; gap: 10px; cursor: default;">
       <span id="supa-status-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:#10b981;flex-shrink:0;box-shadow: 0 0 6px #10b981" title="Supabase Conectado"></span>
-      <span id="supa-status-txt" class="nav-label" style="font-size:0.75rem;color:rgba(255,255,255,0.4);white-space:nowrap;font-weight:600">v3.1 - Online</span>
+      <span id="supa-status-txt" class="nav-label" style="font-size:0.75rem;color:rgba(255,255,255,0.4);white-space:nowrap;font-weight:600">v3.12 - Online</span>
     </div>
   </nav>
 
@@ -573,8 +573,6 @@ textarea.form-control{resize:vertical;min-height:70px}
             <div class="module-subtitle">Gestión de clientes, nadadores, vigencias y autorizaciones</div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-secondary btn-sm" id="btn-importar-historicos" onclick="abrirImportarHistoricos()">📥 Importar históricos CSV</button>
-            <button class="btn btn-secondary btn-sm" id="btn-importar-alegra" onclick="abrirImportarAlegra()">📥 Importar desde Alegra</button>
             <button class="btn btn-primary btn-sm" id="btn-cli-nuevo" onclick="abrirNuevoCliente()">➕ Nuevo cliente</button>
             <button class="btn btn-purple btn-sm" id="btn-nad-nuevo" onclick="abrirFormNadador()" style="display:none">➕ Nuevo nadador</button>
           </div>
@@ -685,19 +683,16 @@ textarea.form-control{resize:vertical;min-height:70px}
         </div>
         <div class="tab-content active" id="fact-importar">
           <div class="card">
-            <div class="card-title">📤 Importar paquetes desde CSV</div>
-            <div class="alert alert-info">
+            <div class="card-title">💳 Carga de sesiones desde Alegra</div>
+            <div class="alert alert-info" style="margin-bottom: 20px;">
               <span>ℹ️</span>
-              <div>Formato: columnas <strong>documento</strong>, <strong>nombre</strong>, <strong>paquete</strong>, <strong>vigencia_hasta</strong> (YYYY-MM-DD).<br>
-              Paquetes válidos: <strong>PLATA, ORO, DIAMANTE, BLACK, INDIVIDUAL</strong>. Primera fila = encabezado.</div>
+              <div>Módulo para cargar sesiones de clientes titulares a partir de archivos de facturación exportados de Alegra (formatos <strong>.xlsx</strong> y <strong>.csv</strong>). Las facturas se concilian automáticamente con los clientes titulares usando Levenshtein fuzzy matching.</div>
             </div>
-            <div class="import-zone" id="fact-drop-zone" onclick="document.getElementById('csv-fact-input').click()">
-              <input type="file" id="csv-fact-input" accept=".csv" onchange="cargarCSVFacturacion(this)">
-              <div class="import-zone-icon">📄</div>
-              <div class="import-zone-text">Haz clic o arrastra un archivo CSV aquí</div>
+            <div class="import-zone" id="alegra-direct-zone" onclick="abrirImportarAlegra()" style="padding: 40px 20px; border: 2px dashed var(--azul-medio); background: var(--surface2); border-radius: 10px; cursor: pointer; text-align: center;">
+              <div style="font-size: 3rem; margin-bottom: 10px;">💳</div>
+              <div style="font-size: 0.9rem; color: var(--azul-oscuro); font-weight: 600;">Abrir Asistente de Carga desde Alegra</div>
+              <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">Soporta archivos Excel (.xlsx) y CSV con autodetección de delimitador</div>
             </div>
-            <div id="fact-preview" style="display:none"></div>
-            <div id="fact-resultado" style="display:none;margin-top:14px"></div>
           </div>
         </div>
         <div class="tab-content" id="fact-estado">
@@ -812,7 +807,7 @@ textarea.form-control{resize:vertical;min-height:70px}
 
         <div class="tab-content" id="param-auditoria">
           <div class="card">
-            <div class="card-title">📋 Registro de Auditoría de Operaciones (v3.1)</div>
+            <div class="card-title">📋 Registro de Auditoría de Operaciones (v3.12)</div>
             <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
               <input type="text" class="form-control" id="buscar-auditoria-input" placeholder="Filtrar por acción o detalle..." oninput="renderAuditoria()" style="flex:1">
               <button class="btn btn-secondary btn-sm" onclick="exportarAuditoriaCSV()">📥 Exportar CSV</button>
@@ -1102,7 +1097,7 @@ textarea.form-control{resize:vertical;min-height:70px}
 <script>
 
 // ================================================================
-// SWIMM STUDIO v3.1 — Sistema de Reservas
+// SWIMM STUDIO v3.12 — Sistema de Reservas
 // ================================================================
 
 // ----------------------------------------------------------------
@@ -1168,7 +1163,7 @@ function updateSyncUI() {
   } else {
     dot.style.backgroundColor = '#10b981';
     dot.style.boxShadow = '0 0 6px #10b981';
-    txt.textContent = 'v3.1 - Online';
+    txt.textContent = 'v3.12 - Online';
     txt.style.color = 'rgba(255,255,255,0.4)';
   }
 }
@@ -1336,7 +1331,7 @@ function addDays(f,n){const d=new Date(f+'T12:00:00');d.setDate(d.getDate()+n);r
 function addHora(h,n){const[hh,mm]=h.split(':').map(Number);return String(Math.min(hh+n,23)).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
 
 // ----------------------------------------------------------------
-// DATOS DE EJEMPLO Y AYUDANTES DE LOGICA DE NEGOCIO v3.1
+// DATOS DE EJEMPLO Y AYUDANTES DE LOGICA DE NEGOCIO v3.12
 // ----------------------------------------------------------------
 function initDatosEjemplo(){
   // Si no hay nadadores ni lotes, inicializamos arreglos vacíos
@@ -1590,15 +1585,14 @@ function actualizarBotonesImportExport(){
     }
   }
   actualizarBtn('btn-header-backup','💾 Backup','Exportar Backup JSON');
-  actualizarBtn('btn-importar-historicos','📥 Importar históricos CSV','Importar clientes históricos');
   actualizarBtn('btn-export-estadisticas','⬇️ Exportar CSV','Exportar estadísticas a CSV');
-  // Also guard the facturación drop zone visually
-  const dropZone=document.getElementById('fact-drop-zone');
+  // Guard the Alegra drop zone visually
+  const dropZone=document.getElementById('alegra-direct-zone');
   if(dropZone){
     dropZone.style.opacity=admin?'':'0.55';
     dropZone.style.pointerEvents=admin?'':'none';
-    const txt=dropZone.querySelector('.import-zone-text');
-    if(txt) txt.textContent=admin?'Haz clic o arrastra un archivo CSV aquí':'🔒 Solo administrador puede importar';
+    const txt=dropZone.querySelector('div:nth-child(2)');
+    if(txt) txt.textContent=admin?'Abrir Asistente de Carga desde Alegra':'🔒 Solo administrador puede cargar';
   }
 }
 
@@ -1748,7 +1742,7 @@ function getSesionesBadge(c){
 
 function tieneSesionesDisponibles(c,tipoSesion='normal'){
   if(!c) return false;
-  // Comprobar si tiene lotes (v3.1)
+  // Comprobar si tiene lotes (v3.12)
   const lotes = DB.getLotes().filter(l => l.cliente_id === c.id && l.estado_vigencia !== 'anulado');
   if (lotes.length > 0) {
     const sesiones = DB.getSesiones().filter(s => s.cliente_id === c.id && s.estado === 'DISPONIBLE');
@@ -2745,8 +2739,6 @@ function switchSubmodClientes(mode) {
   
   document.getElementById('btn-cli-nuevo').style.display = mode === 'clientes' ? 'inline-block' : 'none';
   document.getElementById('btn-nad-nuevo').style.display = mode === 'nadadores' ? 'inline-block' : 'none';
-  document.getElementById('btn-importar-historicos').style.display = mode === 'clientes' ? 'inline-block' : 'none';
-  document.getElementById('btn-importar-alegra').style.display = mode === 'clientes' ? 'inline-block' : 'none';
 
   if (mode === 'clientes') {
     renderClientes();
@@ -2779,7 +2771,7 @@ function renderClientes(){
   
   const pqColor={PLATA:'pk-plata',ORO:'pk-oro',DIAMANTE:'pk-diamante',BLACK:'pk-black',INDIVIDUAL:'pk-individual'};
   tbody.innerHTML=filtered.map(c=>{
-    // Para la era v3.1 consolidamos sesiones activas
+    // Para la era v3.12 consolidamos sesiones activas
     const sesionesCli = DB.getSesiones().filter(s => s.cliente_id === c.id);
     const lotesCli = DB.getLotes().filter(l => l.cliente_id === c.id);
     
@@ -2990,7 +2982,7 @@ function abrirFichaCliente(id){
   const cli=getClienteById(id);if(!cli) return;
   const reservas=DB.getReservas().filter(r=>r.cliente_id===id).sort((a,b)=>b.fecha.localeCompare(a.fecha));
   
-  // Consolidación de sesiones v3.1
+  // Consolidación de sesiones v3.12
   const lotesCli = DB.getLotes().filter(l => l.cliente_id === id);
   const sesionesCli = DB.getSesiones().filter(s => s.cliente_id === id);
   
@@ -3126,7 +3118,7 @@ function abrirFichaCliente(id){
 }
 
 // ----------------------------------------------------------------
-// SUBMÓDULO NADADORES v3.1
+// SUBMÓDULO NADADORES v3.12
 // ----------------------------------------------------------------
 let filtroNadador = 'todos';
 function setFiltroNadador(filter) {
@@ -3590,60 +3582,6 @@ function autorizarManual(id){
   toast(`${cli.nombre} autorizado hasta ${formatFecha(nv)}`,'success');
 }
 
-// IMPORTAR HISTÓRICOS
-function abrirImportarHistoricos(){
-  document.getElementById('modal-title').innerHTML='📥 Importar clientes históricos';
-  document.getElementById('modal-body').innerHTML=`
-    <div class="alert alert-info"><span>ℹ️</span><div>Formato CSV: columna <strong>nombre</strong>. Primera fila = encabezado.</div></div>
-    <div class="import-zone" onclick="document.getElementById('csv-hist-input').click()" style="margin-top:10px">
-      <input type="file" id="csv-hist-input" accept=".csv" onchange="procesarCSVHistoricos(this)">
-      <div class="import-zone-icon">📄</div><div class="import-zone-text">Clic o arrastra CSV aquí</div>
-    </div>
-    <div id="hist-preview" style="margin-top:10px"></div>
-  `;
-  document.getElementById('modal-footer').innerHTML=`<button class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>`;
-  document.getElementById('modal-overlay').classList.add('active');
-}
-
-function procesarCSVHistoricos(input){
-  const file=input.files[0];if(!file) return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    const lines=e.target.result.split('\n').map(l=>l.trim()).filter(Boolean);
-    const headers=lines[0].split(',').map(h=>h.trim().toLowerCase());
-    const ni=headers.indexOf('nombre');if(ni<0){toast('No se encontró columna "nombre".','error');return;}
-    const nombres=lines.slice(1).map(l=>l.split(',')[ni]?.replace(/"/g,'').trim()).filter(Boolean);
-    document.getElementById('hist-preview').innerHTML=`
-      <div class="alert alert-info">${nombres.length} registros. Preview:</div>
-      <div class="preview-wrap">${nombres.slice(0,10).map(n=>`<div class="festivo-row text-sm">${n}</div>`).join('')}${nombres.length>10?`<div class="text-sm text-muted" style="padding:6px">...y ${nombres.length-10} más</div>`:''}</div>
-      <div style="margin-top:10px;text-align:right"><button class="btn btn-primary" onclick='confirmarImportarHistoricos(${JSON.stringify(nombres).replace(/</g,"&lt;")})'>✅ Importar</button></div>
-    `;
-  };reader.readAsText(file);
-}
-
-function abrirImportarHistoricos(){
-  if(!isAdmin()){
-    toast('🔒 Solo el administrador puede importar datos.','error');
-    return;
-  }
-  document.getElementById('modal-title').innerHTML='📥 Importar clientes históricos';
-  document.getElementById('modal-body').innerHTML=`
-    <div class="alert alert-info"><span>ℹ️</span><div>Formato CSV: columna <strong>nombre</strong>. Primera fila = encabezado.</div></div>
-    <div class="import-zone" onclick="document.getElementById('csv-hist-input').click()" style="margin-top:10px">
-      <input type="file" id="csv-hist-input" accept=".csv" onchange="procesarCSVHistoricos(this)">
-      <div class="import-zone-icon">📄</div><div class="import-zone-text">Clic o arrastra CSV aquí</div>
-    </div>
-    <div id="hist-preview" style="margin-top:10px"></div>
-  `;
-  document.getElementById('modal-footer').innerHTML=`<button class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>`;
-  document.getElementById('modal-overlay').classList.add('active');
-}
-
-function confirmarImportarHistoricos(nombres){
-  const clientes=DB.getClientes();const existentes=clientes.map(c=>c.nombre.toLowerCase());let creados=0,omitidos=0;
-  for(const n of nombres){if(existentes.includes(n.toLowerCase())){omitidos++;continue;}clientes.push({id:genId('cl'),tipo:'historico',nombre:n,tipo_documento:null,documento:null,telefono:'',email:'',notas:'',autorizado:false,vigencia_hasta:null,paquete_actual:null,sesiones_disponibles:0,sesiones_induccion:0,sesiones_induccion_realizada:false,sesiones_usadas:0,historial_sesiones:[]});existentes.push(n.toLowerCase());creados++;}
-  DB.saveClientes(clientes);cerrarModal();renderClientes();toast(`${creados} creados, ${omitidos} omitidos por duplicado`,'success');
-}
 
 // ----------------------------------------------------------------
 // MÓDULO FACTURACIÓN
@@ -3704,310 +3642,10 @@ function renderHistorialFact(){
   </tr>`).join('');
 }
 
-function cargarCSVFacturacion(input){
-  if(!isAdmin()){
-    toast('🔒 Solo el administrador puede importar facturación.','error');
-    if(input) input.value='';
-    return;
-  }
-  const file=input.files[0];if(!file) return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    const lines=e.target.result.split('\n').map(l=>l.trim()).filter(Boolean);
-    const rawHeaders=parseCSVLine(lines[0]);
-    const headers=rawHeaders.map(h=>h.replace(/['"]/g,'').trim().toLowerCase());
-    
-    const docIdx=headers.findIndex(h=>h.includes('documento')||h==='doc');
-    const nomIdx=headers.findIndex(h=>h.includes('nombre')||h==='name');
-    const paqIdx=headers.findIndex(h=>h.includes('paquete')||h==='package'||h==='plan');
-    const facIdx=headers.findIndex(h=>h.includes('factura')||h==='fv'||h==='invoice'||h.includes('numero'));
-    
-    if(docIdx<0||nomIdx<0){toast('Faltan columnas requeridas: documento, nombre.','error');return;}
-    
-    const tipoDocIdx=headers.findIndex(h=>h.includes('tipo')||h.includes('id_type'));
-    const dirIdx=headers.findIndex(h=>h.includes('direccion')||h==='address');
-    const telIdx=headers.findIndex(h=>h.includes('telefono')||h==='phone');
-    const emIdx=headers.findIndex(h=>h.includes('email')||h==='mail');
-    const estIdx=headers.findIndex(h=>h.includes('estado')||h==='state');
 
-    const rows=lines.slice(1).map(l=>{
-      const cols=parseCSVLine(l);
-      const docRaw = (cols[docIdx]||'').replace(/['"]/g,'').trim();
-      let docType = tipoDocIdx>=0 ? (cols[tipoDocIdx]||'').replace(/['"]/g,'').trim().toUpperCase() : 'CC';
-      let docNum = docRaw;
-      
-      // Intentar extraer tipo si viene formateado como CC-123456
-      if (docRaw.includes('-')) {
-        const parts = docRaw.split('-');
-        if (['CC','TI','CE','NIT','PAS'].includes(parts[0].toUpperCase())) {
-          docType = parts[0].toUpperCase();
-          docNum = parts[1];
-        }
-      }
-      
-      return {
-        documento: docNum,
-        tipo_documento: docType,
-        nombre: nomIdx>=0 ? (cols[nomIdx]||'').replace(/['"]/g,'').trim() : '',
-        paquete: paqIdx>=0 ? (cols[paqIdx]||'').replace(/['"]/g,'').trim() : '',
-        factura: facIdx>=0 ? (cols[facIdx]||'').replace(/['"]/g,'').trim() : ('FV-' + Date.now() + Math.random().toString(36).slice(2,5)),
-        direccion: dirIdx>=0 ? (cols[dirIdx]||'').replace(/['"]/g,'').trim() : '',
-        telefono: telIdx>=0 ? (cols[telIdx]||'').replace(/['"]/g,'').trim() : '',
-        email: emIdx>=0 ? (cols[emIdx]||'').replace(/['"]/g,'').trim() : '',
-        estado_factura: estIdx>=0 ? (cols[estIdx]||'').replace(/['"]/g,'').trim().toLowerCase() : 'cobrada'
-      };
-    }).filter(r=>r.documento||r.nombre);
-
-    const preview=document.getElementById('fact-preview');preview.style.display='block';
-    preview.innerHTML=`
-      <div class="alert alert-info mt-14">Vista previa — primeras 10 de ${rows.length} facturas:</div>
-      <div class="preview-wrap"><table class="data-table"><thead><tr><th>Factura</th><th>Documento</th><th>Nombre</th><th>Paquete</th><th>Estado</th></tr></thead>
-      <tbody>${rows.slice(0,10).map(r=>`<tr><td>${r.factura}</td><td>${r.tipo_documento}-${r.documento}</td><td>${r.nombre}</td><td>${r.paquete}</td><td>${r.estado_factura}</td></tr>`).join('')}</tbody></table></div>
-      <div style="margin-top:12px;text-align:right"><button class="btn btn-primary" onclick="procesarImportFact(${JSON.stringify(rows).replace(/</g,'&lt;')},'${file.name}')">✅ Procesar importación</button></div>
-    `;
-  };reader.readAsText(file);
-}
-
-function procesarImportFact(rows,filename){
-  if(!isAdmin()){
-    toast('🔒 Solo el administrador puede procesar importaciones.','error');
-    return;
-  }
-  
-  const clientes=DB.getClientes();
-  const lotes=DB.getLotes();
-  const sesiones=DB.getSesiones();
-  const reservas=DB.getReservas();
-  const cfgPaq=DB.getConfig().paquetes||PAQUETES_DEFAULT;
-  
-  let actualizados=0, nuevos=0, anulados=0;
-  const errores=[];
-  
-  for(const row of rows){
-    const facturaNum = row.factura;
-    const isAnulada = ['anulada','anulado','cancelada','cancelado','reversada','reversado'].includes(row.estado_factura);
-    
-    // Buscar si el lote ya existe
-    const loteIdx = lotes.findIndex(l => l.factura === facturaNum);
-    const loteExistente = loteIdx >= 0 ? lotes[loteIdx] : null;
-    
-    if (isAnulada) {
-      if (loteExistente) {
-        // Regla 17: Factura anulada
-        loteExistente.estado_vigencia = 'anulado';
-        
-        // Cancelar sesiones asociadas
-        const sIds = sesiones.filter(s => s.lote_id === loteExistente.id);
-        sIds.forEach(s => {
-          if (s.estado === 'DISPONIBLE') {
-            s.estado = 'ANULADA';
-          } else if (s.estado === 'RESERVADA') {
-            s.estado = 'ANULADA';
-            // Cancelar reserva futura asociada
-            const resObj = reservas.find(r => r.id === s.reserva_id);
-            if (resObj && resObj.estado !== 'cancelado') {
-              resObj.estado = 'cancelado';
-              registrarAuditoria('cancelacion_automatica_reserva', `Reserva ${resObj.id} cancelada automáticamente por anulación de factura ${facturaNum}.`);
-            }
-          } else if (s.estado === 'USADA' || s.estado === 'NO-SHOW') {
-            // No revertir automáticamente, disparar alerta
-            registrarAuditoria('alerta_factura_anulada', `ALERTA: La factura ${facturaNum} fue anulada en Alegra, pero la sesión ${s.codigo} ya tiene estado ${s.estado}.`);
-          }
-        });
-        
-        anulados++;
-        registrarAuditoria('anular_factura', `Factura ${facturaNum} anulada. Lote e inventario cancelado.`);
-      } else {
-        errores.push({ row, motivo: `Factura ${facturaNum} viene anulada pero no existe lote previo en el sistema.` });
-      }
-      continue;
-    }
-    
-    // Idempotencia: Si no es anulada y el lote ya existe, conciliar / ignorar
-    if (loteExistente) {
-      errores.push({ row, motivo: `La factura ${facturaNum} ya fue procesada anteriormente.` });
-      continue;
-    }
-    
-    // Resolver cliente
-    const paq=row.paquete?cfgPaq.find(p=>p.nombre.toUpperCase()===row.paquete.toUpperCase()):null;
-    let cli=clientes.find(c=>c.tipo_documento===row.tipo_documento && c.documento===row.documento);
-    
-    if(cli){
-      // Sincronización de Clientes: Datos provenientes de Alegra tienen prioridad
-      cli.autorizado=true;
-      if (row.direccion) cli.direccion = row.direccion;
-      if (row.telefono) cli.telefono = row.telefono;
-      if (row.email) cli.email = row.email;
-      
-      // Si era pre_cliente, ahora es activo
-      if (cli.tipo === 'pre_cliente') cli.tipo = 'activo';
-      
-      if (cli.tipo_documento !== 'NIT' && row.nombre) {
-        // Actualizar nombres/apellidos
-        const parts = row.nombre.split(' ');
-        cli.nombres = parts[0] || '';
-        cli.apellidos = parts.slice(1).join(' ') || '';
-        cli.nombre = row.nombre;
-      } else if (row.nombre) {
-        cli.razon_social = row.nombre;
-        cli.nombre = row.nombre;
-      }
-      
-      cli.paquete_actual=paq?paq.nombre:row.paquete;
-      actualizados++;
-    } else {
-      // Crear nuevo cliente activo
-      let nombres = '', apellidos = '', razon_social = '';
-      if (row.tipo_documento !== 'NIT') {
-        const parts = row.nombre.split(' ');
-        nombres = parts[0] || '';
-        apellidos = parts.slice(1).join(' ') || '';
-      } else {
-        razon_social = row.nombre;
-      }
-      
-      const newId = genId('cl');
-      cli = {
-        id: newId,
-        tipo: 'activo',
-        nombre: row.nombre || 'Sin nombre',
-        nombres,
-        apellidos,
-        razon_social,
-        tipo_documento: row.tipo_documento,
-        documento: row.documento,
-        direccion: row.direccion,
-        telefono: row.telefono,
-        email: row.email,
-        notas: 'Creado automáticamente vía importación Alegra',
-        autorizado: true,
-        vigencia_hasta: null,
-        paquete_actual: paq ? paq.nombre : row.paquete,
-        sesiones_disponibles: 0,
-        sesiones_usadas: 0,
-        sesiones_induccion: 0,
-        sesiones_induccion_realizada: false,
-        historial_sesiones: []
-      };
-      clientes.push(cli);
-      nuevos++;
-      
-      // Auto-crear nadador Principal si es Natural
-      if (row.tipo_documento !== 'NIT') {
-        const nadadores = DB.getNadadores();
-        nadadores.push({
-          id: genId('nad'),
-          tipo_documento: row.tipo_documento,
-          documento: row.documento,
-          nombres,
-          apellidos,
-          fecha_nacimiento: '',
-          genero: 'No Responde',
-          email: row.email,
-          telefono: row.telefono,
-          direccion: row.direccion,
-          nada_desde: '',
-          asociaciones: [
-            { cliente_id: newId, rol: 'Principal', autorizado: true }
-          ]
-        });
-        DB.saveNadadores(nadadores);
-      }
-    }
-    
-    // Generar Lote
-    const loteId = genId('lt');
-    const nuevoLote = {
-      id: loteId,
-      cliente_id: cli.id,
-      factura: facturaNum,
-      paquete_id: paq ? paq.id : 'pk_custom',
-      paquete_nombre: paq ? paq.nombre : (row.paquete || 'PERSONALIZADO'),
-      cantidad_sesiones: paq ? paq.sesiones : 8,
-      fecha_activacion: null,
-      fecha_vencimiento: null,
-      estado_vigencia: 'no_iniciado'
-    };
-    lotes.push(nuevoLote);
-    
-    // Generar Sesiones
-    const numSesiones = nuevoLote.cantidad_sesiones;
-    const esRenovacion = cli.sesiones_induccion_realizada || (sesiones.some(s => s.cliente_id === cli.id && s.estado === 'USADA'));
-    
-    for (let i = 1; i <= numSesiones; i++) {
-      const serialStr = String(i).padStart(3, '0');
-      sesiones.push({
-        id: `ses_${facturaNum}_${serialStr}`,
-        codigo: `${facturaNum}-${serialStr}`,
-        cliente_id: cli.id,
-        lote_id: loteId,
-        estado: 'DISPONIBLE',
-        fecha_vencimiento: null,
-        fecha_consumo: null,
-        nadador_id: null,
-        reserva_id: null,
-        carril_id: null,
-        servicios_adicionales: ''
-      });
-    }
-    
-    // Si incluye inducción y no es renovación, agregamos la sesión de inducción
-    if (paq && paq.incluye_induccion && !esRenovacion) {
-      sesiones.push({
-        id: `ses_${facturaNum}_IND`,
-        codigo: `${facturaNum}-IND`,
-        cliente_id: cli.id,
-        lote_id: loteId,
-        estado: 'DISPONIBLE',
-        fecha_vencimiento: null,
-        fecha_consumo: null,
-        nadador_id: null,
-        reserva_id: null,
-        carril_id: null,
-        servicios_adicionales: 'Sesión de Inducción'
-      });
-      cli.sesiones_induccion = (cli.sesiones_induccion || 0) + 1;
-    }
-    
-    // Auditoría e historial log
-    if (!cli.historial_sesiones) cli.historial_sesiones = [];
-    cli.historial_sesiones.push({
-      id: genId('m'),
-      fecha: new Date().toISOString(),
-      tipo: 'carga',
-      cantidad: numSesiones,
-      saldo_resultante: sesiones.filter(s => s.cliente_id === cli.id && s.estado === 'DISPONIBLE').length,
-      motivo: `Lote ${nuevoLote.factura} (${nuevoLote.paquete_nombre}) cargado via Alegra`,
-      es_admin: false,
-      reserva_id: null
-    });
-    
-    registrarAuditoria('importar_factura', `Factura ${facturaNum} importada para cliente ${cli.nombre}. Creadas ${numSesiones} sesiones.`);
-  }
-  
-  DB.saveClientes(clientes);
-  DB.saveLotes(lotes);
-  DB.saveSesiones(sesiones);
-  DB.saveReservas(reservas);
-  
-  const hist=DB.getFacturacion();
-  hist.unshift({id:genId('imp'),fecha:new Date().toISOString(),archivo:filename,total:rows.length,nuevos,actualizados,anulados,errores:errores.length,detalle_errores:errores});
-  DB.saveFacturacion(hist);
-  
-  const res=document.getElementById('fact-resultado');res.style.display='block';
-  res.innerHTML=`
-    <div class="alert alert-success">✅ ${actualizados} clientes actualizados / conciliados</div>
-    <div class="alert alert-info">➕ ${nuevos} clientes nuevos creados</div>
-    ${anulados > 0 ? `<div class="alert alert-warning">🚫 ${anulados} facturas marcadas como ANULADAS (lotes e inventario cancelados)</div>` : ''}
-    ${errores.length?`<div class="alert alert-warning">⚠️ ${errores.length} filas no procesadas:<br>${errores.map(x=>`• ${x.row.factura || x.row.nombre}: ${x.motivo}`).join('<br>')}</div>`:''}
-  `;
-  renderEstadoClientes();renderHistorialFact();actualizarBadges();
-  toast(`Importación Alegra: ${actualizados} act, ${nuevos} nuevos, ${anulados} las, ${errores.length} omitidas`,'success');
-}
 
 // ====================================================================
-// MÓDULO: CARGA DE SESIONES DESDE ALEGRA (v3.1)
+// MÓDULO: CARGA DE SESIONES DESDE ALEGRA (v3.12)
 // ====================================================================
 
 let _alegraImportData = {
@@ -4318,13 +3956,17 @@ async function procesarArchivoAlegra(input) {
       if (lines.length === 0) throw new Error("El archivo CSV está vacío.");
       
       const rawHeaders = parseCSVLine(lines[0]);
+      const commas = (lines[0].match(/,/g) || []).length;
+      const semicolons = (lines[0].match(/;/g) || []).length;
+      const delim = semicolons > commas ? ';' : ',';
+      
       const headers = rawHeaders.map((h, idx) => {
         return { label: h, key: findHeaderMapping(h), colIndex: idx };
       });
       _alegraImportData.headers = headers;
       
       rawRows = lines.slice(1).map((line, lineIdx) => {
-        const cols = parseCSVLine(line);
+        const cols = parseCSVLine(line, delim);
         const rowData = {};
         headers.forEach((h, colIndex) => {
           let val = cols[colIndex] ? cols[colIndex].replace(/['"]/g, '').trim() : '';
@@ -6956,14 +6598,19 @@ function procesarMigradorDespues(){
 // ================================================================
 
 
-function parseCSVLine(line){
+function parseCSVLine(line, delimiter){
+  if (!delimiter) {
+    const commas = (line.match(/,/g) || []).length;
+    const semicolons = (line.match(/;/g) || []).length;
+    delimiter = semicolons > commas ? ';' : ',';
+  }
   const result=[];let current='';let inQuotes=false;
   for(let i=0;i<line.length;i++){
     const ch=line[i];
     if(ch==='"'&&!inQuotes){inQuotes=true;}
     else if(ch==='"'&&inQuotes&&line[i+1]==='"'){current+='"';i++;} // escaped quote
     else if(ch==='"'&&inQuotes){inQuotes=false;}
-    else if(ch===','&&!inQuotes){result.push(current);current='';}
+    else if(ch===delimiter&&!inQuotes){result.push(current);current='';}
     else{current+=ch;}
   }
   result.push(current);
@@ -7495,7 +7142,7 @@ document.getElementById('fact-drop-zone').addEventListener('drop',e=>{
   if(!pinConfigured&&(!cfg.admin_pin||cfg.admin_pin==='')){
     setTimeout(()=>mostrarSetupPin(),600);
   }
-  console.log('🏊 Swimm Studio v3.1 — Iniciado');
+  console.log('🏊 Swimm Studio v3.12 — Iniciado');
 })();
 </script>
 </body>
