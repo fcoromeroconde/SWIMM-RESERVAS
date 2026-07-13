@@ -23,7 +23,7 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Swimm Studio — Sistema de Reservas v2.1</title>
+<title>Swimm Studio — Sistema de Reservas v3.1</title>
 <meta name="description" content="Sistema de reservas para carriles de natación Swimm Studio. Gestión de clientes, sesiones, facturación y estadísticas.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -500,7 +500,7 @@ textarea.form-control{resize:vertical;min-height:70px}
     </div>
     <div class="sidebar-footer" style="padding: 12px 18px; border-top: 1px solid rgba(255,255,255,0.05); overflow: hidden; display: flex; align-items: center; gap: 10px; cursor: default;">
       <span id="supa-status-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:#10b981;flex-shrink:0;box-shadow: 0 0 6px #10b981" title="Supabase Conectado"></span>
-      <span id="supa-status-txt" class="nav-label" style="font-size:0.75rem;color:rgba(255,255,255,0.4);white-space:nowrap;font-weight:600">v2.1 - Online</span>
+      <span id="supa-status-txt" class="nav-label" style="font-size:0.75rem;color:rgba(255,255,255,0.4);white-space:nowrap;font-weight:600">v3.1 - Online</span>
     </div>
   </nav>
 
@@ -574,6 +574,7 @@ textarea.form-control{resize:vertical;min-height:70px}
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn btn-secondary btn-sm" id="btn-importar-historicos" onclick="abrirImportarHistoricos()">📥 Importar históricos CSV</button>
+            <button class="btn btn-secondary btn-sm" id="btn-importar-alegra" onclick="abrirImportarAlegra()">📥 Importar desde Alegra</button>
             <button class="btn btn-primary btn-sm" id="btn-cli-nuevo" onclick="abrirNuevoCliente()">➕ Nuevo cliente</button>
             <button class="btn btn-purple btn-sm" id="btn-nad-nuevo" onclick="abrirFormNadador()" style="display:none">➕ Nuevo nadador</button>
           </div>
@@ -582,6 +583,7 @@ textarea.form-control{resize:vertical;min-height:70px}
         <div class="tabs" id="tabs-clientes-submod" style="margin-bottom: 14px;">
           <div class="tab active" id="btn-submod-clientes" onclick="switchSubmodClientes('clientes')">👥 Clientes Titulares</div>
           <div class="tab" id="btn-submod-nadadores" onclick="switchSubmodClientes('nadadores')">🏊 Nadadores</div>
+          <div class="tab" id="btn-submod-pendientes-alegra" onclick="switchSubmodClientes('pendientes_alegra')">⏳ Conciliación Alegra</div>
         </div>
 
         <div id="container-clientes">
@@ -639,6 +641,32 @@ textarea.form-control{resize:vertical;min-height:70px}
             </table>
           </div>
           <div id="no-nadadores" class="no-data" style="display:none">No se encontraron nadadores.</div>
+        </div>
+        
+        <!-- PENDIENTES ALEGRA -->
+        <div id="container-pendientes-alegra" style="display:none">
+          <div class="filters-bar" style="justify-content: space-between;">
+            <div style="font-weight: 600; font-size: 0.95rem;">Facturas Pendientes de Conciliación Manual</div>
+            <button class="btn btn-secondary btn-sm" onclick="renderPendientesAlegra()">↺ Actualizar</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Comprobante</th>
+                  <th>Cliente (Alegra)</th>
+                  <th>Identificación (Alegra)</th>
+                  <th>Fecha Factura</th>
+                  <th>Monto</th>
+                  <th>Paquete</th>
+                  <th>Sesiones</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tabla-pendientes-alegra"></tbody>
+            </table>
+          </div>
+          <div id="no-pendientes-alegra" class="no-data" style="display:none">No hay facturas pendientes de conciliación.</div>
         </div>
       </section>
 
@@ -784,7 +812,7 @@ textarea.form-control{resize:vertical;min-height:70px}
 
         <div class="tab-content" id="param-auditoria">
           <div class="card">
-            <div class="card-title">📋 Registro de Auditoría de Operaciones (v2.1)</div>
+            <div class="card-title">📋 Registro de Auditoría de Operaciones (v3.1)</div>
             <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
               <input type="text" class="form-control" id="buscar-auditoria-input" placeholder="Filtrar por acción o detalle..." oninput="renderAuditoria()" style="flex:1">
               <button class="btn btn-secondary btn-sm" onclick="exportarAuditoriaCSV()">📥 Exportar CSV</button>
@@ -1074,7 +1102,7 @@ textarea.form-control{resize:vertical;min-height:70px}
 <script>
 
 // ================================================================
-// SWIMM STUDIO v2.1 — Sistema de Reservas
+// SWIMM STUDIO v3.1 — Sistema de Reservas
 // ================================================================
 
 // ----------------------------------------------------------------
@@ -1140,7 +1168,7 @@ function updateSyncUI() {
   } else {
     dot.style.backgroundColor = '#10b981';
     dot.style.boxShadow = '0 0 6px #10b981';
-    txt.textContent = 'v2.1 - Online';
+    txt.textContent = 'v3.1 - Online';
     txt.style.color = 'rgba(255,255,255,0.4)';
   }
 }
@@ -1152,7 +1180,7 @@ window.addEventListener('beforeunload', (e) => {
   }
 });
 
-const CHUNKED_KEYS = ['reservas', 'sesiones', 'auditoria'];
+const CHUNKED_KEYS = ['reservas', 'sesiones', 'auditoria', 'alegra_invoices', 'session_movements'];
 
 async function syncToSupabase(key, value) {
   if(!supabaseClient) return;
@@ -1244,7 +1272,11 @@ const InMemoryDB = {
   nadadores: null,
   lotes: null,
   sesiones: null,
-  auditoria: null
+  auditoria: null,
+  alegra_imports: null,
+  alegra_invoices: null,
+  session_movements: null,
+  reconciliation_pendings: null
 };
 
 // Intentar cargar desde localStorage como respaldo inicial
@@ -1279,6 +1311,10 @@ const DB={
   getLotes(){return this.get('lotes')||[];},
   getSesiones(){return this.get('sesiones')||[];},
   getAuditoria(){return this.get('auditoria')||[];},
+  getAlegraImports(){return this.get('alegra_imports')||[];},
+  getAlegraInvoices(){return this.get('alegra_invoices')||[];},
+  getSessionMovements(){return this.get('session_movements')||[];},
+  getReconciliationPendings(){return this.get('reconciliation_pendings')||[];},
   saveConfig(v){this.set('config',v);},
   saveBloqueos(v){this.set('bloqueos',v);},
   saveClientes(v){this.set('clientes',v);},
@@ -1288,6 +1324,10 @@ const DB={
   saveLotes(v){this.set('lotes',v);},
   saveSesiones(v){this.set('sesiones',v);},
   saveAuditoria(v){this.set('auditoria',v);},
+  saveAlegraImports(v){this.set('alegra_imports',v);},
+  saveAlegraInvoices(v){this.set('alegra_invoices',v);},
+  saveSessionMovements(v){this.set('session_movements',v);},
+  saveReconciliationPendings(v){this.set('reconciliation_pendings',v);},
 };
 
 function genId(p='id'){return p+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);}
@@ -1296,7 +1336,7 @@ function addDays(f,n){const d=new Date(f+'T12:00:00');d.setDate(d.getDate()+n);r
 function addHora(h,n){const[hh,mm]=h.split(':').map(Number);return String(Math.min(hh+n,23)).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
 
 // ----------------------------------------------------------------
-// DATOS DE EJEMPLO Y AYUDANTES DE LOGICA DE NEGOCIO v2.1
+// DATOS DE EJEMPLO Y AYUDANTES DE LOGICA DE NEGOCIO v3.1
 // ----------------------------------------------------------------
 function initDatosEjemplo(){
   // Si no hay nadadores ni lotes, inicializamos arreglos vacíos
@@ -1304,6 +1344,10 @@ function initDatosEjemplo(){
   if(!DB.get('lotes')) DB.saveLotes([]);
   if(!DB.get('sesiones')) DB.saveSesiones([]);
   if(!DB.get('auditoria')) DB.saveAuditoria([]);
+  if(!DB.get('alegra_imports')) DB.saveAlegraImports([]);
+  if(!DB.get('alegra_invoices')) DB.saveAlegraInvoices([]);
+  if(!DB.get('session_movements')) DB.saveSessionMovements([]);
+  if(!DB.get('reconciliation_pendings')) DB.saveReconciliationPendings([]);
 }
 
 function calcularEdadYMenor(fechaNac) {
@@ -1704,7 +1748,7 @@ function getSesionesBadge(c){
 
 function tieneSesionesDisponibles(c,tipoSesion='normal'){
   if(!c) return false;
-  // Comprobar si tiene lotes (v2.1)
+  // Comprobar si tiene lotes (v3.1)
   const lotes = DB.getLotes().filter(l => l.cliente_id === c.id && l.estado_vigencia !== 'anulado');
   if (lotes.length > 0) {
     const sesiones = DB.getSesiones().filter(s => s.cliente_id === c.id && s.estado === 'DISPONIBLE');
@@ -2694,17 +2738,22 @@ function switchSubmodClientes(mode) {
   activeSubmodClientes = mode;
   document.getElementById('btn-submod-clientes').classList.toggle('active', mode === 'clientes');
   document.getElementById('btn-submod-nadadores').classList.toggle('active', mode === 'nadadores');
+  document.getElementById('btn-submod-pendientes-alegra').classList.toggle('active', mode === 'pendientes_alegra');
   document.getElementById('container-clientes').style.display = mode === 'clientes' ? 'block' : 'none';
   document.getElementById('container-nadadores').style.display = mode === 'nadadores' ? 'block' : 'none';
+  document.getElementById('container-pendientes-alegra').style.display = mode === 'pendientes_alegra' ? 'block' : 'none';
   
   document.getElementById('btn-cli-nuevo').style.display = mode === 'clientes' ? 'inline-block' : 'none';
   document.getElementById('btn-nad-nuevo').style.display = mode === 'nadadores' ? 'inline-block' : 'none';
   document.getElementById('btn-importar-historicos').style.display = mode === 'clientes' ? 'inline-block' : 'none';
+  document.getElementById('btn-importar-alegra').style.display = mode === 'clientes' ? 'inline-block' : 'none';
 
   if (mode === 'clientes') {
     renderClientes();
-  } else {
+  } else if (mode === 'nadadores') {
     renderNadadores();
+  } else if (mode === 'pendientes_alegra') {
+    renderPendientesAlegra();
   }
 }
 
@@ -2730,7 +2779,7 @@ function renderClientes(){
   
   const pqColor={PLATA:'pk-plata',ORO:'pk-oro',DIAMANTE:'pk-diamante',BLACK:'pk-black',INDIVIDUAL:'pk-individual'};
   tbody.innerHTML=filtered.map(c=>{
-    // Para la era v2.1 consolidamos sesiones activas
+    // Para la era v3.1 consolidamos sesiones activas
     const sesionesCli = DB.getSesiones().filter(s => s.cliente_id === c.id);
     const lotesCli = DB.getLotes().filter(l => l.cliente_id === c.id);
     
@@ -2809,7 +2858,7 @@ function mostrarFormCliente(id){
     </div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-control" id="cli-email" value="${cli?.email||''}"></div>
-      <div class="form-group"><label class="form-label">Vigencia hasta</label><input type="date" class="form-control" id="cli-vigencia" value="${cli?.vigencia_hasta||''}"></div>
+      <div class="form-group"><label class="form-label">Cliente desde</label><input type="date" class="form-control" id="cli-vigencia" value="${cli?.vigencia_hasta||''}"></div>
     </div>
     <div class="form-row">
       <div class="form-group" style="display:flex;align-items:center;gap:10px;padding-top:10px">
@@ -2941,7 +2990,7 @@ function abrirFichaCliente(id){
   const cli=getClienteById(id);if(!cli) return;
   const reservas=DB.getReservas().filter(r=>r.cliente_id===id).sort((a,b)=>b.fecha.localeCompare(a.fecha));
   
-  // Consolidación de sesiones v2.1
+  // Consolidación de sesiones v3.1
   const lotesCli = DB.getLotes().filter(l => l.cliente_id === id);
   const sesionesCli = DB.getSesiones().filter(s => s.cliente_id === id);
   
@@ -3077,7 +3126,7 @@ function abrirFichaCliente(id){
 }
 
 // ----------------------------------------------------------------
-// SUBMÓDULO NADADORES v2.1
+// SUBMÓDULO NADADORES v3.1
 // ----------------------------------------------------------------
 let filtroNadador = 'todos';
 function setFiltroNadador(filter) {
@@ -3953,9 +4002,1962 @@ function procesarImportFact(rows,filename){
     ${anulados > 0 ? `<div class="alert alert-warning">🚫 ${anulados} facturas marcadas como ANULADAS (lotes e inventario cancelados)</div>` : ''}
     ${errores.length?`<div class="alert alert-warning">⚠️ ${errores.length} filas no procesadas:<br>${errores.map(x=>`• ${x.row.factura || x.row.nombre}: ${x.motivo}`).join('<br>')}</div>`:''}
   `;
-  document.getElementById('fact-preview').style.display='none';
   renderEstadoClientes();renderHistorialFact();actualizarBadges();
-  toast(`Importación Alegra: ${actualizados} act, ${nuevos} nuevos, ${anulados} anuladas, ${errores.length} omitidas`,'success');
+  toast(`Importación Alegra: ${actualizados} act, ${nuevos} nuevos, ${anulados} las, ${errores.length} omitidas`,'success');
+}
+
+// ====================================================================
+// MÓDULO: CARGA DE SESIONES DESDE ALEGRA (v3.1)
+// ====================================================================
+
+let _alegraImportData = {
+  importRunId: '',
+  filename: '',
+  fileType: '',
+  rows: [],
+  stats: {},
+  headers: []
+};
+
+const COLUMN_MAPPINGS = {
+  numero_comprobante: ['numerodecomprobante', 'numerocomprobante', 'nrocomprobante', 'nrocomprobantes', 'comprobantenumber', 'comprobanteno', 'comprobantenumero', 'nrocomprobantealegra'],
+  estado: ['estado', 'status', 'estadofactura'],
+  cliente: ['cliente', 'client', 'nombrecliente', 'clientename', 'clientealegra'],
+  identificacion: ['identificacion', 'identificacioncliente', 'nit', 'cedula', 'documento', 'nrodocumento', 'numerodedocumento', 'identificacionalegra'],
+  creacion: ['creacion', 'fechadecreacion', 'fecha', 'date', 'createdat', 'fechafactura', 'fechadefactura'],
+  despues_de_impuestos: ['despuesdeimpuestos', 'despuesimpuestos', 'totaldespuesdeimpuestos', 'total', 'aftertax', 'valordespuesdeimpuestos']
+};
+
+function normalizeHeader(str) {
+  if (!str) return '';
+  return str.toString().toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "")
+    .trim();
+}
+
+function findHeaderMapping(rawHeader) {
+  let normalized = normalizeHeader(rawHeader);
+  for (let key in COLUMN_MAPPINGS) {
+    if (COLUMN_MAPPINGS[key].includes(normalized)) {
+      return key;
+    }
+  }
+  return null;
+}
+
+function normalizarIdentificacion(idStr) {
+  if (!idStr) return '';
+  let str = idStr.toString().trim()
+    .replace(/^(NIT|CC|CE|TI|PAS|PASAPORTE)[\s\-]+/i, '')
+    .replace(/[^a-zA-Z0-9\-]/g, '');
+  let parts = str.split('-');
+  let mainPart = parts[0];
+  if (mainPart.startsWith('9') && mainPart.length === 9) {
+    return mainPart;
+  }
+  return str.replace(/[^a-zA-Z0-9]/g, '');
+}
+
+function normalizarNombre(nombreStr) {
+  if (!nombreStr) return '';
+  let str = nombreStr.toString().toLowerCase();
+  str = str.replace(/ñ/g, '__n__');
+  str = str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  str = str.replace(/__n__/g, 'ñ');
+  return str.replace(/\s+/g, ' ').trim();
+}
+
+function calcularSimilitudLevenshtein(s1, s2) {
+  let longer = s1;
+  let shorter = s2;
+  if (s1.length < s2.length) {
+    longer = s2;
+    shorter = s1;
+  }
+  let longerLength = longer.length;
+  if (longerLength === 0) {
+    return 1.0;
+  }
+  
+  const editDistance = (str1, str2) => {
+    str1 = str1.toLowerCase();
+    str2 = str2.toLowerCase();
+    let costs = [];
+    for (let i = 0; i <= str1.length; i++) {
+      let lastValue = i;
+      for (let j = 0; j <= str2.length; j++) {
+        if (i === 0) costs[j] = j;
+        else {
+          if (j > 0) {
+            let newValue = costs[j - 1];
+            if (str1.charAt(i - 1) !== str2.charAt(j - 1)) {
+              newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+            }
+            costs[j - 1] = lastValue;
+            lastValue = newValue;
+          }
+        }
+      }
+      if (i > 0) costs[str2.length] = lastValue;
+    }
+    return costs[str2.length];
+  };
+
+  return (longerLength - editDistance(longer, shorter)) / parseFloat(longerLength);
+}
+
+function obtenerCandidatosConciliacion(clienteAlegraName) {
+  if (!clienteAlegraName) return [];
+  const clientes = DB.getClientes();
+  const nombreNormalizadoAlegra = normalizarNombre(clienteAlegraName);
+  
+  const candidates = [];
+  clientes.forEach(c => {
+    const nombreClienteApp = getNombreCliente(c);
+    const nombreNormalizadoApp = normalizarNombre(nombreClienteApp);
+    const similitud = calcularSimilitudLevenshtein(nombreNormalizadoApp, nombreNormalizadoAlegra);
+    
+    if (similitud >= 0.40) {
+      candidates.push({
+        cliente: c,
+        similitud: similitud
+      });
+    }
+  });
+  
+  candidates.sort((a, b) => b.similitud - a.similitud);
+  return candidates.slice(0, 5);
+}
+
+function proponerNombresApellidos(nombreCompleto) {
+  if (!nombreCompleto) return { nombres: '', apellidos: '' };
+  const parts = nombreCompleto.trim().split(/\s+/);
+  if (parts.length === 1) return { nombres: parts[0], apellidos: '' };
+  if (parts.length === 2) return { nombres: parts[0], apellidos: parts[1] };
+  if (parts.length === 3) return { nombres: parts[0] + ' ' + parts[1], apellidos: parts[2] };
+  const half = Math.ceil(parts.length / 2);
+  return {
+    nombres: parts.slice(0, half).join(' '),
+    apellidos: parts.slice(half).join(' ')
+  };
+}
+
+function parsearFechaAlegra(fechaVal) {
+  if (!fechaVal) return '';
+  if (fechaVal instanceof Date) {
+    return fechaVal.toISOString().split('T')[0];
+  }
+  let str = fechaVal.toString().trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    return str.split(' ')[0];
+  }
+  let parts = str.split(/[\/\-]/);
+  if (parts.length === 3) {
+    if (parts[2].length === 4) {
+      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+    if (parts[0].length === 4) {
+      return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+    }
+  }
+  try {
+    const d = new Date(fechaVal);
+    if (!isNaN(d.getTime())) {
+      return d.toISOString().split('T')[0];
+    }
+  } catch (e) {}
+  return str;
+}
+
+function abrirImportarAlegra() {
+  let ov = document.getElementById('alegra-import-ov');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'alegra-import-ov';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:3000;display:flex;align-items:center;justify-content:center;padding:16px;overflow:hidden;font-family:inherit;';
+    document.body.appendChild(ov);
+  }
+  
+  ov.innerHTML = `
+    <div style="background:var(--surface);border-radius:16px;width:min(1140px,98vw);height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.5)">
+      <!-- HEADER -->
+      <div style="padding:16px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;background:linear-gradient(135deg,rgba(0,119,182,0.12),rgba(0,119,182,0.04))">
+        <div>
+          <div style="font-size:1.15rem;font-weight:700;color:var(--azul);display:flex;align-items:center;gap:10px">
+            💳 Carga de sesiones desde Alegra
+          </div>
+          <div style="color:var(--text-secondary);font-size:0.8rem;margin-top:2px">
+            Importar facturación para actualizar saldo de sesiones
+          </div>
+        </div>
+        <button onclick="cerrarImportarAlegra()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text-secondary)">✕</button>
+      </div>
+      
+      <!-- CONTENT STEP 1 -->
+      <div id="alegra-wizard-content" style="flex:1;padding:24px;overflow-y:auto;display:flex;flex-direction:column;justify-content:center;align-items:center;">
+        <div class="card" style="width:100%;max-width:550px;padding:30px;text-align:center;">
+          <div style="font-size:3rem;margin-bottom:14px;">📤</div>
+          <h3 style="margin-bottom:10px;font-weight:600;">Cargar Reporte de Facturación</h3>
+          <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:20px;line-height:1.5;">
+            Selecciona o arrastra el archivo de facturación exportado desde Alegra.<br>
+            Formatos soportados: <strong>.xlsx, .csv</strong>
+          </p>
+          <div class="import-zone" id="alegra-drop-zone" onclick="document.getElementById('alegra-file-input').click()" style="padding:40px 20px;border:2px dashed var(--azul-medio);background:var(--surface2);border-radius:10px;cursor:pointer;">
+            <input type="file" id="alegra-file-input" accept=".csv,.xlsx" onchange="procesarArchivoAlegra(this)" style="display:none">
+            <span style="font-size:0.85rem;color:var(--azul-oscuro);font-weight:500;">Haz clic para buscar o arrastra el archivo aquí</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  const dropZone = document.getElementById('alegra-drop-zone');
+  if (dropZone) {
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = 'var(--azul)';
+      dropZone.style.background = 'var(--azul-palido)';
+    });
+    dropZone.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = 'var(--azul-medio)';
+      dropZone.style.background = 'var(--surface2)';
+    });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        const fileInput = document.getElementById('alegra-file-input');
+        fileInput.files = files;
+        procesarArchivoAlegra(fileInput);
+      }
+    });
+  }
+}
+
+function cerrarImportarAlegra() {
+  const ov = document.getElementById('alegra-import-ov');
+  if (ov) ov.remove();
+  _alegraImportData = { importRunId: '', filename: '', fileType: '', rows: [], stats: {}, headers: [] };
+}
+
+async function procesarArchivoAlegra(input) {
+  const file = input.files[0];
+  if (!file) return;
+  
+  const contentArea = document.getElementById('alegra-wizard-content');
+  contentArea.innerHTML = `
+    <div style="text-align:center;padding:40px;">
+      <span style="font-size:2rem;display:inline-block;animation:spin 1.5s linear infinite;">⏳</span>
+      <p style="margin-top:14px;color:var(--text-secondary);font-size:0.88rem;">Analizando el archivo y prevalidando datos, por favor espera...</p>
+    </div>
+  `;
+  
+  let styleSpin = document.getElementById('alegra-spin-style');
+  if (!styleSpin) {
+    styleSpin = document.createElement('style');
+    styleSpin.id = 'alegra-spin-style';
+    styleSpin.innerHTML = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
+    document.head.appendChild(styleSpin);
+  }
+  
+  _alegraImportData.filename = file.name;
+  _alegraImportData.fileType = file.name.endsWith('.xlsx') ? 'xlsx' : 'csv';
+  _alegraImportData.importRunId = genId('imp_aleg');
+  
+  try {
+    let rawRows = [];
+    if (_alegraImportData.fileType === 'xlsx') {
+      const buffer = await file.arrayBuffer();
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer);
+      const ws = workbook.getWorksheet(1) || workbook.worksheets[0];
+      
+      let headers = [];
+      ws.eachRow((row, rowNumber) => {
+        if (headers.length > 0) {
+          const rowData = {};
+          headers.forEach((h, colIndex) => {
+            const cell = row.getCell(colIndex + 1);
+            let val = cell.value;
+            if (val && typeof val === 'object') {
+              if (val.result !== undefined) val = val.result;
+              else if (val.richText) val = val.richText.map(rt => rt.text).join('');
+              else if (val.text) val = val.text;
+            }
+            rowData[h.key] = val;
+          });
+          if (Object.values(rowData).some(v => v !== null && v !== undefined && v !== '')) {
+            rowData._originalIdx = rowNumber;
+            rawRows.push(rowData);
+          }
+        } else {
+          const rowValues = [];
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            let val = cell.value;
+            if (val && typeof val === 'object' && val.richText) {
+              val = val.richText.map(rt => rt.text).join('');
+            }
+            rowValues[colNumber - 1] = val ? val.toString().trim() : '';
+          });
+          
+          const matchedKeys = rowValues.map(h => findHeaderMapping(h)).filter(Boolean);
+          if (matchedKeys.length >= 3) {
+            headers = rowValues.map((h, idx) => {
+              return { label: h, key: findHeaderMapping(h), colIndex: idx };
+            });
+            _alegraImportData.headers = headers;
+          }
+        }
+      });
+    } else {
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      if (lines.length === 0) throw new Error("El archivo CSV está vacío.");
+      
+      const rawHeaders = parseCSVLine(lines[0]);
+      const headers = rawHeaders.map((h, idx) => {
+        return { label: h, key: findHeaderMapping(h), colIndex: idx };
+      });
+      _alegraImportData.headers = headers;
+      
+      rawRows = lines.slice(1).map((line, lineIdx) => {
+        const cols = parseCSVLine(line);
+        const rowData = {};
+        headers.forEach((h, colIndex) => {
+          let val = cols[colIndex] ? cols[colIndex].replace(/['"]/g, '').trim() : '';
+          rowData[h.key] = val;
+        });
+        rowData._originalIdx = lineIdx + 2;
+        return rowData;
+      });
+    }
+    
+    const mandatoryKeys = ['numero_comprobante', 'estado', 'cliente', 'identificacion', 'creacion', 'despues_de_impuestos'];
+    const missingKeys = mandatoryKeys.filter(k => !_alegraImportData.headers.some(h => h.key === k));
+    if (missingKeys.length > 0) {
+      const prettyNames = {
+        numero_comprobante: 'Número de comprobante',
+        estado: 'Estado',
+        cliente: 'Cliente',
+        identificacion: 'Identificación',
+        creacion: 'Creación',
+        despues_de_impuestos: 'Después de impuestos'
+      };
+      const missingNames = missingKeys.map(k => prettyNames[k] || k).join(', ');
+      throw new Error(`Estructura inválida. Columnas obligatorias faltantes: ${missingNames}`);
+    }
+    
+    const clientes = DB.getClientes();
+    const lotes = DB.getLotes();
+    const facturas = DB.getAlegraInvoices();
+    const paquetes = DB.getConfig().paquetes || PAQUETES_DEFAULT;
+    
+    const processedRows = [];
+    
+    for (const rawRow of rawRows) {
+      const row = { ...rawRow };
+      row.numero_comprobante = (row.numero_comprobante || '').toString().trim();
+      row.estado = (row.estado || '').toString().trim();
+      row.cliente = (row.cliente || '').toString().trim();
+      row.identificacion = (row.identificacion || '').toString().trim();
+      row.creacion = parsearFechaAlegra(row.creacion);
+      
+      row.estado_procesamiento = '';
+      row.mensaje_error = '';
+      row.cliente_asociado_id = null;
+      row.paquete_id = null;
+      row.paquete_nombre = '';
+      row.sesiones = 0;
+      row.candidates = [];
+      
+      if (!row.numero_comprobante) {
+        row.estado_procesamiento = 'error_formato';
+        row.mensaje_error = 'Número de comprobante vacío';
+        processedRows.push(row);
+        continue;
+      }
+      
+      const yaExisteLote = lotes.some(l => l.factura === row.numero_comprobante);
+      const yaExisteFactura = facturas.some(inv => inv.numero_comprobante === row.numero_comprobante && (inv.estado_procesamiento === 'procesada' || inv.estado_procesamiento === 'cliente_conciliado' || inv.estado_procesamiento === 'cliente_creado'));
+      if (yaExisteLote || yaExisteFactura) {
+        row.estado_procesamiento = 'ya_importada';
+        row.mensaje_error = 'Factura ya importada previamente';
+        processedRows.push(row);
+        continue;
+      }
+      
+      if (row.estado.toLowerCase() !== 'cobrada') {
+        row.estado_procesamiento = 'ignorada_estado_no_valido';
+        row.mensaje_error = 'Ignorada por estado no válido';
+        processedRows.push(row);
+        continue;
+      }
+      
+      const valueAfterTax = parseFloat(row.despues_de_impuestos);
+      if (isNaN(valueAfterTax)) {
+        row.estado_procesamiento = 'error_formato';
+        row.mensaje_error = 'Monto Después de impuestos no es numérico';
+        processedRows.push(row);
+        continue;
+      }
+      
+      const matchedPaq = paquetes.find(p => p.activo !== false && parseFloat(p.precio) === valueAfterTax);
+      if (!matchedPaq) {
+        row.estado_procesamiento = 'producto_no_identificado';
+        row.mensaje_error = 'Producto no identificado';
+        row.producto_identificado_nombre = 'DESCONOCIDO';
+        processedRows.push(row);
+        continue;
+      }
+      
+      row.paquete_id = matchedPaq.id;
+      row.paquete_nombre = matchedPaq.nombre;
+      row.sesiones = matchedPaq.sesiones;
+      row.producto_identificado_nombre = matchedPaq.nombre;
+      
+      const idNormalizada = normalizarIdentificacion(row.identificacion);
+      let matchCliente = null;
+      if (idNormalizada) {
+        matchCliente = clientes.find(c => c.documento && normalizarIdentificacion(c.documento) === idNormalizada);
+      }
+      
+      if (matchCliente) {
+        row.cliente_asociado_id = matchCliente.id;
+        row.estado_procesamiento = 'cliente_identificado_automaticamente';
+      } else {
+        row.estado_procesamiento = 'pendiente_conciliacion';
+        row.candidates = obtenerCandidatosConciliacion(row.cliente);
+      }
+      
+      processedRows.push(row);
+    }
+    
+    _alegraImportData.rows = processedRows;
+    renderResumenPrevalidacion();
+    
+  } catch (err) {
+    console.error("[Alegra Import]", err);
+    toast(err.message, 'error');
+    cerrarImportarAlegra();
+  }
+}
+
+function renderResumenPrevalidacion() {
+  const rows = _alegraImportData.rows;
+  
+  let total = rows.length;
+  let yaImportadas = 0;
+  let ignoradasEstado = 0;
+  let prodNoIdentificado = 0;
+  let pendientes = 0;
+  let identificadasAuto = 0;
+  let conciliadasManual = 0;
+  let creadasManual = 0;
+  let errores = 0;
+  
+  rows.forEach(r => {
+    if (r.estado_procesamiento === 'ya_importada') yaImportadas++;
+    else if (r.estado_procesamiento === 'ignorada_estado_no_valido') ignoradasEstado++;
+    else if (r.estado_procesamiento === 'producto_no_identificado') prodNoIdentificado++;
+    else if (r.estado_procesamiento === 'pendiente_conciliacion' && !r._deferred && !r._deleted) pendientes++;
+    else if (r.estado_procesamiento === 'cliente_identificado_automaticamente') identificadasAuto++;
+    else if (r.estado_procesamiento === 'cliente_conciliado') conciliadasManual++;
+    else if (r.estado_procesamiento === 'cliente_creado') creadasManual++;
+    else if (r.estado_procesamiento === 'error_formato' || r.estado_procesamiento === 'error_tecnico') errores++;
+  });
+  
+  const toProcess = identificadasAuto + conciliadasManual + creadasManual;
+  const totalCargarSesiones = rows.reduce((sum, r) => {
+    if (['cliente_identificado_automaticamente', 'cliente_conciliado', 'cliente_creado'].includes(r.estado_procesamiento)) {
+      return sum + (r.sesiones || 0);
+    }
+    return sum;
+  }, 0);
+
+  _alegraImportData.stats = {
+    total, yaImportadas, ignoradasEstado, prodNoIdentificado, pendientes,
+    identificadasAuto, conciliadasManual, creadasManual, toProcess, totalCargarSesiones, errores
+  };
+  
+  const contentArea = document.getElementById('alegra-wizard-content');
+  contentArea.style.display = 'block';
+  contentArea.style.height = '100%';
+  
+  contentArea.innerHTML = `
+    <div style="display:flex;flex-direction:column;height:100%;">
+      <!-- KPIs -->
+      <div class="kpi-grid" style="width:100%;margin-bottom:16px;flex-shrink:0;">
+        <div class="kpi-card" style="padding:10px;">
+          <div class="kpi-value">${total}</div>
+          <div class="kpi-label">Leídas</div>
+        </div>
+        <div class="kpi-card" style="padding:10px;border-color:var(--verde);">
+          <div class="kpi-value" style="color:var(--verde);">${identificadasAuto}</div>
+          <div class="kpi-label">Auto-Identificados</div>
+        </div>
+        <div class="kpi-card" style="padding:10px;border-color:var(--amarillo);">
+          <div class="kpi-value" style="color:var(--amarillo);">${pendientes}</div>
+          <div class="kpi-label">Por Conciliar</div>
+        </div>
+        <div class="kpi-card" style="padding:10px;border-color:#a855f7;">
+          <div class="kpi-value" style="color:#a855f7;">${conciliadasManual + creadasManual}</div>
+          <div class="kpi-label">Resueltos</div>
+        </div>
+        <div class="kpi-card" style="padding:10px;border-color:var(--rojo);">
+          <div class="kpi-value" style="color:var(--rojo);">${prodNoIdentificado + ignoradasEstado + yaImportadas + errores}</div>
+          <div class="kpi-label">Omitidas / No Válidas</div>
+        </div>
+      </div>
+      
+      <div style="display:flex;gap:20px;width:100%;flex:1;overflow:hidden;">
+        <!-- Table list (Left) -->
+        <div style="flex:1.2;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border);border-radius:10px;background:var(--surface);">
+          <div style="padding:10px 14px;background:var(--surface2);font-weight:600;border-bottom:1px solid var(--border);font-size:0.85rem;">Detalle de Facturas Analizadas</div>
+          <div style="flex:1;overflow-y:auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Comprobante</th>
+                  <th>Cliente Alegra</th>
+                  <th>Monto</th>
+                  <th>Paquete</th>
+                  <th>Estado análisis</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.filter(r => !r._deleted).map((r, idx) => {
+                  let badge = '';
+                  let bgStyle = '';
+                  if (r.estado_procesamiento === 'ya_importada') {
+                    badge = '<span class="badge badge-gray">Ya Importada</span>';
+                    bgStyle = 'background:rgba(0,0,0,0.02);color:var(--text-secondary);';
+                  } else if (r.estado_procesamiento === 'ignorada_estado_no_valido') {
+                    badge = '<span class="badge badge-red">Estado No Válido</span>';
+                    bgStyle = 'background:rgba(231,76,60,0.04);';
+                  } else if (r.estado_procesamiento === 'producto_no_identificado') {
+                    badge = '<span class="badge badge-red">Monto No Identificado</span>';
+                    bgStyle = 'background:rgba(231,76,60,0.04);';
+                  } else if (r.estado_procesamiento === 'cliente_identificado_automaticamente') {
+                    badge = '<span class="badge badge-green">Listo (Auto)</span>';
+                    bgStyle = 'background:rgba(46,204,113,0.06);';
+                  } else if (r.estado_procesamiento === 'cliente_conciliado') {
+                    badge = '<span class="badge badge-blue">Listo (Asociado)</span>';
+                    bgStyle = 'background:rgba(0,119,182,0.06);';
+                  } else if (r.estado_procesamiento === 'cliente_creado') {
+                    badge = '<span class="badge badge-purple">Listo (Nuevo)</span>';
+                    bgStyle = 'background:rgba(168,85,247,0.06);';
+                  } else if (r.estado_procesamiento === 'pendiente_conciliacion') {
+                    if (r._deferred) {
+                      badge = '<span class="badge badge-gray">Diferida (Pendiente)</span>';
+                      bgStyle = 'background:rgba(0,0,0,0.04);';
+                    } else {
+                      badge = '<span class="badge badge-yellow">Requiere Conciliación</span>';
+                      bgStyle = 'background:rgba(243,156,18,0.06);';
+                    }
+                  } else if (r.estado_procesamiento === 'error_formato') {
+                    badge = `<span class="badge badge-red">Error: ${r.mensaje_error}</span>`;
+                    bgStyle = 'background:rgba(231,76,60,0.06);';
+                  }
+                  
+                  return `
+                    <tr style="${bgStyle}">
+                      <td style="font-weight:600;">${r.numero_comprobante || '—'}</td>
+                      <td>${r.cliente || '—'}<br><span class="text-muted" style="font-size:0.75rem;">ID: ${r.identificacion || '—'}</span></td>
+                      <td>$${parseFloat(r.despues_de_impuestos).toLocaleString('es-CO')}</td>
+                      <td>${r.paquete_nombre || '<span style="color:var(--rojo);">No identificado</span>'}</td>
+                      <td>${badge}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Reconciliation (Right) -->
+        <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border);border-radius:10px;background:var(--surface);">
+          <div style="padding:10px 14px;background:var(--surface2);font-weight:600;border-bottom:1px solid var(--border);font-size:0.85rem;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+            <span>Resolución de Clientes (${pendientes} pendientes)</span>
+            <span style="font-size:0.75rem;color:var(--text-secondary);">Fase 1</span>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:14px;background:var(--surface2);display:flex;flex-direction:column;gap:12px;" id="alegra-reconciliation-panel">
+            ${pendientes === 0 ? `
+              <div style="text-align:center;padding:40px;color:var(--text-secondary);font-size:0.85rem;background:var(--surface);border-radius:8px;border:1px solid var(--border);">
+                🎉 ¡Todas las conciliaciones resueltas!
+              </div>
+            ` : `
+              ${renderSeccionConciliaciones()}
+            `}
+          </div>
+        </div>
+      </div>
+      
+      <!-- FOOTER ACTION BAR -->
+      <div style="width:100%;padding:14px 0 0 0;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;margin-top:14px;">
+        <div style="font-size:0.8rem;color:var(--text-secondary);">
+          Sesiones totales a cargar: <strong style="color:var(--azul-oscuro);font-size:0.95rem;">${totalCargarSesiones}</strong>
+        </div>
+        <div>
+          <button class="btn btn-secondary" onclick="cerrarImportarAlegra()" style="margin-right:8px;">Cancelar</button>
+          <button class="btn btn-primary" onclick="confirmarAplicarAlegra()" ${toProcess === 0 && pendientes > 0 ? 'disabled' : ''}>
+            🚀 Confirmar y Aplicar (${toProcess} facturas)
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderSeccionConciliaciones() {
+  const rows = _alegraImportData.rows;
+  const pendingRows = rows.map((r, idx) => ({ row: r, index: idx })).filter(x => x.row.estado_procesamiento === 'pendiente_conciliacion' && !x.row._deferred && !x.row._deleted);
+  
+  if (pendingRows.length === 0) return '';
+  
+  const item = pendingRows[0];
+  const r = item.row;
+  const idx = item.index;
+  
+  const prop = proponerNombresApellidos(r.cliente);
+  
+  let candidatesHtml = '';
+  if (r.candidates && r.candidates.length > 0) {
+    candidatesHtml = r.candidates.map(c => {
+      let percent = Math.round(c.similitud * 100);
+      let badgeClass = percent >= 95 ? 'badge-green' : percent >= 80 ? 'badge-yellow' : 'badge-gray';
+      let label = percent >= 95 ? 'Fuerte' : percent >= 80 ? 'Media' : 'Baja';
+      const cNombre = getNombreCliente(c.cliente);
+      const cDoc = c.cliente.documento || 'Sin ID';
+      return `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:0.8rem;margin-bottom:6px;">
+          <div>
+            <strong>${cNombre}</strong><br>
+            <span class="text-muted" style="font-size:0.75rem;">Doc: ${c.cliente.tipo_documento || ''} ${cDoc}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="badge ${badgeClass}">${percent}% (${label})</span>
+            <button class="btn btn-secondary btn-xs" onclick="asociarClienteExistenteConciliacion(${idx}, '${c.cliente.id}')">Asociar</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } else {
+    candidatesHtml = `<div style="font-size:0.78rem;color:var(--text-secondary);text-align:center;padding:10px;">No se encontraron clientes similares.</div>`;
+  }
+  
+  return `
+    <div class="card" style="padding:14px;background:var(--surface);border:1.5px solid var(--azul-claro);flex-shrink:0;">
+      <div style="font-size:0.8rem;color:var(--azul);font-weight:700;margin-bottom:6px;text-transform:uppercase;">Factura ${r.numero_comprobante}</div>
+      <div class="ficha-stat"><span class="ficha-stat-label">Cliente Alegra</span><strong>${r.cliente}</strong></div>
+      <div class="ficha-stat"><span class="ficha-stat-label">Identificación</span><span>${r.identificacion || '—'}</span></div>
+      <div class="ficha-stat"><span class="ficha-stat-label">Valor Después Imp.</span><strong>$${parseFloat(r.despues_de_impuestos).toLocaleString('es-CO')}</strong></div>
+      <div class="ficha-stat"><span class="ficha-stat-label">Producto / Sesiones</span><span>${r.paquete_nombre} (${r.sesiones} sesiones)</span></div>
+      <div class="ficha-stat"><span class="ficha-stat-label">Fecha Creación</span><span>${r.creacion}</span></div>
+    </div>
+    
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div>
+        <div style="font-weight:600;font-size:0.8rem;margin-bottom:6px;color:var(--text-primary);">Candidatos Sugeridos (Fuzzy Match):</div>
+        ${candidatesHtml}
+      </div>
+      
+      <div style="border-top:1px solid var(--border);padding-top:10px;">
+        <div style="font-weight:600;font-size:0.8rem;margin-bottom:6px;">Asociar con otro cliente existente:</div>
+        <div style="display:flex;gap:6px;">
+          <select class="form-control" id="reconcile-search-select-${idx}" style="flex:1;font-size:0.8rem;height:34px;">
+            <option value="">-- Seleccionar cliente titular --</option>
+            ${DB.getClientes().map(c => `<option value="${c.id}">${getNombreCliente(c)} (${c.tipo_documento || ''} ${c.documento || ''})</option>`).join('')}
+          </select>
+          <button class="btn btn-secondary btn-sm" onclick="asociarClienteBusquedaConciliacion(${idx})">Asociar</button>
+        </div>
+      </div>
+      
+      <div style="border-top:1px solid var(--border);padding-top:10px;">
+        <button class="btn btn-purple btn-sm w-full" onclick="abrirFormularioCreacionConciliacion(${idx})">👤 Crear como cliente nuevo...</button>
+        <div id="reconcile-new-cli-form-${idx}" style="display:none;margin-top:10px;">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:10px;">
+            <div class="form-row">
+              <div class="form-group" style="margin:0;">
+                <label class="form-label">Tipo Doc *</label>
+                <select class="form-control" id="new-cli-tipo-doc-${idx}" onchange="actualizarFormularioCreacionNIT(${idx})" style="font-size:0.8rem;padding:4px 8px;">
+                  <option value="CC" selected>CC</option>
+                  <option value="TI">TI</option>
+                  <option value="CE">CE</option>
+                  <option value="NIT">NIT</option>
+                  <option value="PAS">PAS</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label class="form-label">Documento *</label>
+                <input type="text" class="form-control" id="new-cli-doc-${idx}" value="${r.identificacion || ''}" style="font-size:0.8rem;padding:4px 8px;">
+              </div>
+            </div>
+            
+            <div id="new-cli-natural-fields-${idx}">
+              <div class="form-row">
+                <div class="form-group" style="margin:0;"><label class="form-label">Nombres *</label><input type="text" class="form-control" id="new-cli-nombres-${idx}" value="${prop.nombres}" style="font-size:0.8rem;padding:4px 8px;"></div>
+                <div class="form-group" style="margin:0;"><label class="form-label">Apellidos *</label><input type="text" class="form-control" id="new-cli-apellidos-${idx}" value="${prop.apellidos}" style="font-size:0.8rem;padding:4px 8px;"></div>
+              </div>
+            </div>
+            <div id="new-cli-juridico-fields-${idx}" style="display:none;">
+              <div class="form-group" style="margin:0;"><label class="form-label">Razón Social *</label><input type="text" class="form-control" id="new-cli-razon-social-${idx}" value="${r.cliente || ''}" style="font-size:0.8rem;padding:4px 8px;"></div>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group" style="margin:0;"><label class="form-label">Dirección *</label><input type="text" class="form-control" id="new-cli-direccion-${idx}" value="" style="font-size:0.8rem;padding:4px 8px;"></div>
+              <div class="form-group" style="margin:0;"><label class="form-label">Teléfono *</label><input type="text" class="form-control" id="new-cli-telefono-${idx}" value="" style="font-size:0.8rem;padding:4px 8px;"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="margin:0;grid-column: span 2;"><label class="form-label">Email *</label><input type="email" class="form-control" id="new-cli-email-${idx}" value="" style="font-size:0.8rem;padding:4px 8px;"></div>
+            </div>
+            
+            <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:4px;">
+              <button class="btn btn-secondary btn-xs" onclick="cerrarFormularioCreacionConciliacion(${idx})">Cancelar</button>
+              <button class="btn btn-primary btn-xs" onclick="guardarClienteNuevoConciliacion(${idx})">Crear y Asociar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="border-top:1px solid var(--border);padding-top:10px;display:flex;gap:6px;">
+        <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="resolverConciliacionManual(${idx}, 'defer')">⏳ Dejar Pendiente</button>
+        <button class="btn btn-danger btn-sm" style="flex:1;" onclick="resolverConciliacionManual(${idx}, 'delete')">🗑 Eliminar Fila</button>
+      </div>
+    </div>
+  `;
+}
+
+function actualizarFormularioCreacionNIT(idx) {
+  const tipoDoc = document.getElementById(`new-cli-tipo-doc-${idx}`).value;
+  const divNatural = document.getElementById(`new-cli-natural-fields-${idx}`);
+  const divJuridico = document.getElementById(`new-cli-juridico-fields-${idx}`);
+  if (tipoDoc === 'NIT') {
+    divNatural.style.display = 'none';
+    divJuridico.style.display = 'block';
+  } else {
+    divNatural.style.display = 'block';
+    divJuridico.style.display = 'none';
+  }
+}
+
+function abrirFormularioCreacionConciliacion(idx) {
+  document.getElementById(`reconcile-new-cli-form-${idx}`).style.display = 'block';
+}
+
+function cerrarFormularioCreacionConciliacion(idx) {
+  document.getElementById(`reconcile-new-cli-form-${idx}`).style.display = 'none';
+}
+
+function asociarClienteExistenteConciliacion(idx, clienteId) {
+  resolverConciliacionManual(idx, 'associate', clienteId);
+}
+
+function asociarClienteBusquedaConciliacion(idx) {
+  const clienteId = document.getElementById(`reconcile-search-select-${idx}`).value;
+  if (!clienteId) {
+    toast('Selecciona un cliente válido para asociar.', 'warning');
+    return;
+  }
+  resolverConciliacionManual(idx, 'associate', clienteId);
+}
+
+function resolverConciliacionManual(rowIdx, accion, targetId = null) {
+  const row = _alegraImportData.rows[rowIdx];
+  if (accion === 'associate') {
+    row.cliente_asociado_id = targetId;
+    row.estado_procesamiento = 'cliente_conciliado';
+  } else if (accion === 'defer') {
+    row._deferred = true;
+  } else if (accion === 'delete') {
+    row._deleted = true;
+  }
+  toast('Conciliación registrada.', 'success');
+  renderResumenPrevalidacion();
+}
+
+function guardarClienteNuevoConciliacion(idx) {
+  const row = _alegraImportData.rows[idx];
+  const tipoDoc = document.getElementById(`new-cli-tipo-doc-${idx}`).value;
+  const documento = document.getElementById(`new-cli-doc-${idx}`).value.trim();
+  const direccion = document.getElementById(`new-cli-direccion-${idx}`).value.trim();
+  const telefono = document.getElementById(`new-cli-telefono-${idx}`).value.trim();
+  const email = document.getElementById(`new-cli-email-${idx}`).value.trim();
+  
+  if (!tipoDoc || !documento) {
+    toast('El tipo y número de documento son requeridos.', 'error');
+    return;
+  }
+  if (!direccion || !telefono || !email) {
+    toast('La dirección, teléfono y correo electrónico son campos obligatorios.', 'error');
+    return;
+  }
+  
+  let nombres = '';
+  let apellidos = '';
+  let razon_social = '';
+  let nombre = '';
+  
+  if (tipoDoc === 'NIT') {
+    razon_social = document.getElementById(`new-cli-razon-social-${idx}`).value.trim();
+    if (!razon_social) {
+      toast('La razón social es obligatoria para NIT.', 'error');
+      return;
+    }
+    nombre = razon_social;
+  } else {
+    nombres = document.getElementById(`new-cli-nombres-${idx}`).value.trim();
+    apellidos = document.getElementById(`new-cli-apellidos-${idx}`).value.trim();
+    if (!nombres || !apellidos) {
+      toast('Los nombres y apellidos son requeridos.', 'error');
+      return;
+    }
+    nombre = `${nombres} ${apellidos}`;
+  }
+  
+  const clientes = DB.getClientes();
+  const existeDoc = clientes.find(c => c.tipo_documento === tipoDoc && c.documento === documento);
+  if (existeDoc) {
+    toast(`Ya existe un cliente registrado con ${tipoDoc} ${documento}.`, 'error');
+    return;
+  }
+  
+  row.new_client_data = {
+    id: genId('cl'),
+    tipo: 'activo',
+    nombre: nombre,
+    nombres: nombres,
+    apellidos: apellidos,
+    razon_social: razon_social,
+    tipo_documento: tipoDoc,
+    documento: documento,
+    direccion: direccion,
+    telefono: telefono,
+    email: email,
+    notas: 'Creado automáticamente vía conciliación Alegra',
+    autorizado: true,
+    vigencia_hasta: null,
+    paquete_actual: row.paquete_nombre,
+    sesiones_disponibles: 0,
+    sesiones_usadas: 0,
+    sesiones_induccion: 0,
+    sesiones_induccion_realizada: false,
+    historial_sesiones: []
+  };
+  
+  row.estado_procesamiento = 'cliente_creado';
+  toast('Cliente creado y pre-asociado.', 'success');
+  renderResumenPrevalidacion();
+}
+
+function confirmarAplicarAlegra() {
+  const runId = _alegraImportData.importRunId;
+  const filename = _alegraImportData.filename;
+  const fileType = _alegraImportData.fileType;
+  const rows = _alegraImportData.rows;
+  
+  const clientes = DB.getClientes();
+  const lotes = DB.getLotes();
+  const sesiones = DB.getSesiones();
+  const auditoria = DB.getAuditoria();
+  const alegraInvoices = DB.getAlegraInvoices();
+  const sessionMovements = DB.getSessionMovements();
+  const reconciliationPendings = DB.getReconciliationPendings();
+  const paquetes = DB.getConfig().paquetes || PAQUETES_DEFAULT;
+  
+  let totalProcesadas = 0;
+  let totalYaImportadas = 0;
+  let totalIgnoradasEstado = 0;
+  let totalProductoNoIdentificado = 0;
+  let totalPendientesConciliacion = 0;
+  let totalClientesAuto = 0;
+  let totalClientesConciliados = 0;
+  let totalClientesCreados = 0;
+  let totalErrores = 0;
+  let sesionesCargadas = 0;
+  
+  const processedInvoices = [];
+  
+  for (const r of rows) {
+    if (r._deleted) {
+      continue;
+    }
+    
+    if (r.estado_procesamiento === 'ya_importada') {
+      totalYaImportadas++;
+      processedInvoices.push({
+        numero_comprobante: r.numero_comprobante,
+        comprobante: r.comprobante || 'Factura de Venta',
+        estado: r.estado,
+        cliente_alegra: r.cliente,
+        identificacion_alegra: r.identificacion,
+        fecha_creacion: r.creacion,
+        subtotal: r.subtotal || 0,
+        descuento: r.descuento || 0,
+        antes_de_impuestos: r.antes_de_impuestos || 0,
+        impuestos: r.impuestos || 0,
+        despues_de_impuestos: r.despues_de_impuestos,
+        producto_identificado: r.producto_identificado_nombre || '',
+        cliente_asociado_id: null,
+        importacion_id: runId,
+        estado_procesamiento: 'ya_importada',
+        mensaje_error: 'Ya importada',
+        accion_realizada: 'Ignorada'
+      });
+      continue;
+    }
+    
+    if (r.estado_procesamiento === 'ignorada_estado_no_valido') {
+      totalIgnoradasEstado++;
+      processedInvoices.push({
+        numero_comprobante: r.numero_comprobante,
+        comprobante: r.comprobante || 'Factura de Venta',
+        estado: r.estado,
+        cliente_alegra: r.cliente,
+        identificacion_alegra: r.identificacion,
+        fecha_creacion: r.creacion,
+        subtotal: r.subtotal || 0,
+        descuento: r.descuento || 0,
+        antes_de_impuestos: r.antes_de_impuestos || 0,
+        impuestos: r.impuestos || 0,
+        despues_de_impuestos: r.despues_de_impuestos,
+        producto_identificado: r.producto_identificado_nombre || '',
+        cliente_asociado_id: null,
+        importacion_id: runId,
+        estado_procesamiento: 'ignorada_estado_no_valido',
+        mensaje_error: 'Ignorada por estado no válido',
+        accion_realizada: 'Ignorada'
+      });
+      continue;
+    }
+    
+    if (r.estado_procesamiento === 'producto_no_identificado') {
+      totalProductoNoIdentificado++;
+      processedInvoices.push({
+        numero_comprobante: r.numero_comprobante,
+        comprobante: r.comprobante || 'Factura de Venta',
+        estado: r.estado,
+        cliente_alegra: r.cliente,
+        identificacion_alegra: r.identificacion,
+        fecha_creacion: r.creacion,
+        subtotal: r.subtotal || 0,
+        descuento: r.descuento || 0,
+        antes_de_impuestos: r.antes_de_impuestos || 0,
+        impuestos: r.impuestos || 0,
+        despues_de_impuestos: r.despues_de_impuestos,
+        producto_identificado: '',
+        cliente_asociado_id: null,
+        importacion_id: runId,
+        estado_procesamiento: 'producto_no_identificado',
+        mensaje_error: 'Producto no identificado',
+        accion_realizada: 'Ignorada'
+      });
+      continue;
+    }
+    
+    if (r.estado_procesamiento === 'error_formato') {
+      totalErrores++;
+      processedInvoices.push({
+        numero_comprobante: r.numero_comprobante,
+        comprobante: r.comprobante || 'Factura de Venta',
+        estado: r.estado,
+        cliente_alegra: r.cliente,
+        identificacion_alegra: r.identificacion,
+        fecha_creacion: r.creacion,
+        subtotal: r.subtotal || 0,
+        descuento: r.descuento || 0,
+        antes_de_impuestos: r.antes_de_impuestos || 0,
+        impuestos: r.impuestos || 0,
+        despues_de_impuestos: r.despues_de_impuestos || 0,
+        producto_identificado: '',
+        cliente_asociado_id: null,
+        importacion_id: runId,
+        estado_procesamiento: 'error_formato',
+        mensaje_error: r.mensaje_error,
+        accion_realizada: 'Ignorada'
+      });
+      continue;
+    }
+    
+    if (r.estado_procesamiento === 'pendiente_conciliacion') {
+      totalPendientesConciliacion++;
+      
+      const pendingRecord = {
+        id: genId('rec'),
+        numero_comprobante: r.numero_comprobante,
+        comprobante: r.comprobante || 'Factura de Venta',
+        estado: r.estado,
+        cliente_alegra: r.cliente,
+        identificacion_alegra: r.identificacion,
+        fecha_creacion: r.creacion,
+        subtotal: r.subtotal || 0,
+        descuento: r.descuento || 0,
+        antes_de_impuestos: r.antes_de_impuestos || 0,
+        impuestos: r.impuestos || 0,
+        despues_de_impuestos: r.despues_de_impuestos,
+        producto_identificado: r.producto_identificado_nombre,
+        importacion_id: runId,
+        fecha_carga: new Date().toISOString()
+      };
+      reconciliationPendings.push(pendingRecord);
+      
+      processedInvoices.push({
+        numero_comprobante: r.numero_comprobante,
+        comprobante: r.comprobante || 'Factura de Venta',
+        estado: r.estado,
+        cliente_alegra: r.cliente,
+        identificacion_alegra: r.identificacion,
+        fecha_creacion: r.creacion,
+        subtotal: r.subtotal || 0,
+        descuento: r.descuento || 0,
+        antes_de_impuestos: r.antes_de_impuestos || 0,
+        impuestos: r.impuestos || 0,
+        despues_de_impuestos: r.despues_de_impuestos,
+        producto_identificado: r.producto_identificado_nombre,
+        cliente_asociado_id: null,
+        importacion_id: runId,
+        estado_procesamiento: 'pendiente_conciliacion',
+        mensaje_error: '',
+        accion_realizada: 'Dejada pendiente'
+      });
+      continue;
+    }
+    
+    const paq = paquetes.find(p => p.id === r.paquete_id);
+    if (!paq) {
+      totalErrores++;
+      continue;
+    }
+    
+    let cli = null;
+    if (r.estado_procesamiento === 'cliente_creado' && r.new_client_data) {
+      cli = r.new_client_data;
+      clientes.push(cli);
+      totalClientesCreados++;
+      
+      if (cli.tipo_documento !== 'NIT') {
+        const nadadores = DB.getNadadores();
+        nadadores.push({
+          id: genId('nad'),
+          tipo_documento: cli.tipo_documento,
+          documento: cli.documento,
+          nombres: cli.nombres,
+          apellidos: cli.apellidos,
+          fecha_nacimiento: '',
+          genero: 'No Responde',
+          email: cli.email,
+          telefono: cli.telefono,
+          direccion: cli.direccion,
+          nada_desde: '',
+          asociaciones: [
+            { cliente_id: cli.id, rol: 'Principal', autorizado: true }
+          ]
+        });
+        DB.saveNadadores(nadadores);
+      }
+      
+    } else {
+      cli = clientes.find(c => c.id === r.cliente_asociado_id);
+      if (r.estado_procesamiento === 'cliente_identificado_automaticamente') {
+        totalClientesAuto++;
+      } else if (r.estado_procesamiento === 'cliente_conciliado') {
+        totalClientesConciliados++;
+      }
+    }
+    
+    if (!cli) {
+      totalErrores++;
+      r.estado_procesamiento = 'error_tecnico';
+      r.mensaje_error = 'No se encontró el cliente asociado';
+      processedInvoices.push({
+        numero_comprobante: r.numero_comprobante,
+        comprobante: r.comprobante || 'Factura de Venta',
+        estado: r.estado,
+        cliente_alegra: r.cliente,
+        identificacion_alegra: r.identificacion,
+        fecha_creacion: r.creacion,
+        subtotal: r.subtotal || 0,
+        descuento: r.descuento || 0,
+        antes_de_impuestos: r.antes_de_impuestos || 0,
+        impuestos: r.impuestos || 0,
+        despues_de_impuestos: r.despues_de_impuestos,
+        producto_identificado: paq.nombre,
+        cliente_asociado_id: null,
+        importacion_id: runId,
+        estado_procesamiento: 'error_tecnico',
+        mensaje_error: 'No se encontró cliente',
+        accion_realizada: 'Ignorada'
+      });
+      continue;
+    }
+    
+    cli.autorizado = true;
+    if (r.direccion) cli.direccion = r.direccion;
+    if (r.telefono) cli.telefono = r.telefono;
+    if (r.email) cli.email = r.email;
+    if (cli.tipo === 'pre_cliente') cli.tipo = 'activo';
+    
+    if (cli.tipo_documento !== 'NIT' && r.cliente) {
+      const parts = r.cliente.trim().split(/\s+/);
+      cli.nombres = parts[0] || '';
+      cli.apellidos = parts.slice(1).join(' ') || '';
+      cli.nombre = r.cliente;
+    } else if (r.cliente) {
+      cli.razon_social = r.cliente;
+      cli.nombre = r.cliente;
+    }
+    if (cli.documento !== r.identificacion) {
+      cli.documento = r.identificacion;
+    }
+    
+    const saldoAnterior = cli.sesiones_disponibles || 0;
+    cli.sesiones_disponibles = (cli.sesiones_disponibles || 0) + paq.sesiones;
+    cli.paquete_actual = paq.nombre;
+    
+    const loteId = genId('lt');
+    const nuevoLote = {
+      id: loteId,
+      cliente_id: cli.id,
+      factura: r.numero_comprobante,
+      paquete_id: paq.id,
+      paquete_nombre: paq.nombre,
+      cantidad_sesiones: paq.sesiones,
+      fecha_activacion: null,
+      fecha_vencimiento: null,
+      estado_vigencia: 'no_iniciado',
+      precio_historico: paq.precio,
+      sesiones_disponibles_inicialmente: paq.sesiones,
+      vigencia_dias: paq.vigencia_dias > 0 ? paq.vigencia_dias : null,
+      vigencia_ilimitada: paq.vigencia_dias <= 0,
+      induccion: paq.incluye_induccion,
+      compartible: paq.compartible,
+      fecha_compra: r.creacion,
+      fecha_importacion: new Date().toISOString()
+    };
+    lotes.push(nuevoLote);
+    
+    const esRenovacion = cli.sesiones_induccion_realizada || (sesiones.some(s => s.cliente_id === cli.id && s.estado === 'USADA'));
+    for (let i = 1; i <= paq.sesiones; i++) {
+      const serialStr = String(i).padStart(3, '0');
+      sesiones.push({
+        id: `ses_${r.numero_comprobante}_${serialStr}`,
+        codigo: `${r.numero_comprobante}-${serialStr}`,
+        cliente_id: cli.id,
+        lote_id: loteId,
+        estado: 'DISPONIBLE',
+        fecha_vencimiento: null,
+        fecha_consumo: null,
+        nadador_id: null,
+        reserva_id: null,
+        carril_id: null,
+        servicios_adicionales: ''
+      });
+    }
+    
+    if (paq.incluye_induccion && !esRenovacion) {
+      sesiones.push({
+        id: `ses_${r.numero_comprobante}_IND`,
+        codigo: `${r.numero_comprobante}-IND`,
+        cliente_id: cli.id,
+        lote_id: loteId,
+        estado: 'DISPONIBLE',
+        fecha_vencimiento: null,
+        fecha_consumo: null,
+        nadador_id: null,
+        reserva_id: null,
+        carril_id: null,
+        servicios_adicionales: 'Sesión de Inducción'
+      });
+      cli.sesiones_induccion = (cli.sesiones_induccion || 0) + 1;
+    }
+    
+    const movementId = genId('sm');
+    const nuevoMovimiento = {
+      id: movementId,
+      tipo: 'carga_por_factura_alegra',
+      cantidad: paq.sesiones,
+      cliente_id: cli.id,
+      factura: r.numero_comprobante,
+      paquete_asociado: paq.nombre,
+      importacion_id: runId,
+      saldo_anterior: saldoAnterior,
+      saldo_nuevo: cli.sesiones_disponibles,
+      fecha: new Date().toISOString(),
+      usuario: isAdmin() ? 'admin' : 'recepcion',
+      observacion: `Carga de sesiones desde Alegra por factura ${r.numero_comprobante}`
+    };
+    sessionMovements.push(nuevoMovimiento);
+    
+    if (!cli.historial_sesiones) cli.historial_sesiones = [];
+    cli.historial_sesiones.push({
+      id: genId('m'),
+      fecha: new Date().toISOString(),
+      tipo: 'carga',
+      cantidad: paq.sesiones,
+      saldo_resultante: cli.sesiones_disponibles,
+      motivo: `Lote ${r.numero_comprobante} (${paq.nombre}) cargado via Alegra`,
+      es_admin: isAdmin(),
+      reserva_id: null
+    });
+    
+    const invoiceRecord = {
+      numero_comprobante: r.numero_comprobante,
+      comprobante: r.comprobante || 'Factura de Venta',
+      estado: r.estado,
+      cliente_alegra: r.cliente,
+      identificacion_alegra: r.identificacion,
+      fecha_creacion: r.creacion,
+      subtotal: r.subtotal || 0,
+      descuento: r.descuento || 0,
+      antes_de_impuestos: r.antes_de_impuestos || 0,
+      impuestos: r.impuestos || 0,
+      despues_de_impuestos: r.despues_de_impuestos,
+      producto_identificado: paq.nombre,
+      cliente_asociado_id: cli.id,
+      importacion_id: runId,
+      estado_procesamiento: r.estado_procesamiento,
+      mensaje_error: '',
+      accion_realizada: `Carga de ${paq.sesiones} sesiones`
+    };
+    alegraInvoices.push(invoiceRecord);
+    
+    totalProcesadas++;
+    sesionesCargadas += paq.sesiones;
+    
+    registrarAuditoria('importar_factura_alegra', `Factura ${r.numero_comprobante} importada desde Alegra para cliente ${cli.nombre}. Creadas ${paq.sesiones} sesiones.`);
+  }
+  
+  const importRun = {
+    id: runId,
+    archivo: filename,
+    tipo_archivo: fileType,
+    usuario: isAdmin() ? 'admin' : 'recepcion',
+    fecha_carga: new Date().toISOString(),
+    fecha_confirmacion: new Date().toISOString(),
+    estado: totalPendientesConciliacion > 0 ? 'parcialmente_procesada' : 'procesada',
+    total_filas: rows.length,
+    total_procesadas: totalProcesadas,
+    total_ya_importadas: totalYaImportadas,
+    total_ignoradas_estado: totalIgnoradasEstado,
+    total_producto_no_identificado: totalProductoNoIdentificado,
+    total_pendientes_conciliacion: totalPendientesConciliacion,
+    total_clientes_auto: totalClientesAuto,
+    total_clientes_conciliados: totalClientesConciliados,
+    total_clientes_creados: totalClientesCreados,
+    total_errores: totalErrores,
+    sesiones_cargadas: sesionesCargadas
+  };
+  
+  const importsList = DB.getAlegraImports();
+  importsList.unshift(importRun);
+  
+  DB.saveClientes(clientes);
+  DB.saveLotes(lotes);
+  DB.saveSesiones(sesiones);
+  DB.saveAlegraImports(importsList);
+  DB.saveAlegraInvoices(alegraInvoices);
+  DB.saveSessionMovements(sessionMovements);
+  DB.saveReconciliationPendings(reconciliationPendings);
+  
+  renderClientes();
+  actualizarBadges();
+  
+  renderReporteEjecucion(importRun, processedInvoices);
+}
+
+function renderReporteEjecucion(importRun, processedInvoices) {
+  const contentArea = document.getElementById('alegra-wizard-content');
+  
+  contentArea.innerHTML = `
+    <div style="width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;">
+      <div class="alert alert-success" style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+        <div>
+          <strong>¡Importación completada exitosamente!</strong><br>
+          Se procesaron ${importRun.total_procesadas} facturas y se cargaron ${importRun.sesiones_cargadas} sesiones en total.
+        </div>
+        <button class="btn btn-purple btn-sm" onclick="descargarPDFReporteAlegra('${importRun.id}')">📥 Descargar Reporte PDF</button>
+      </div>
+      
+      <div class="kpi-grid" style="grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); margin-bottom:14px; flex-shrink:0;">
+        <div class="kpi-card" style="padding:8px;">
+          <div class="kpi-value" style="font-size:1.4rem;">${importRun.total_filas}</div>
+          <div class="kpi-label">Filas leídas</div>
+        </div>
+        <div class="kpi-card" style="padding:8px;border-color:var(--verde);">
+          <div class="kpi-value" style="font-size:1.4rem;color:var(--verde);">${importRun.total_procesadas}</div>
+          <div class="kpi-label">Procesadas</div>
+        </div>
+        <div class="kpi-card" style="padding:8px;">
+          <div class="kpi-value" style="font-size:1.4rem;">${importRun.total_ya_importadas}</div>
+          <div class="kpi-label">Ya importadas</div>
+        </div>
+        <div class="kpi-card" style="padding:8px;">
+          <div class="kpi-value" style="font-size:1.4rem;">${importRun.total_ignoradas_estado}</div>
+          <div class="kpi-label">Ignoradas estado</div>
+        </div>
+        <div class="kpi-card" style="padding:8px;border-color:var(--rojo);">
+          <div class="kpi-value" style="font-size:1.4rem;color:var(--rojo);">${importRun.total_producto_no_identificado}</div>
+          <div class="kpi-label">Prod. No Identif.</div>
+        </div>
+        <div class="kpi-card" style="padding:8px;border-color:var(--amarillo);">
+          <div class="kpi-value" style="font-size:1.4rem;color:var(--amarillo);">${importRun.total_pendientes_conciliacion}</div>
+          <div class="kpi-label">Quedaron Pendientes</div>
+        </div>
+      </div>
+      
+      <div style="flex:1;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface);">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Fila</th>
+              <th>Comprobante</th>
+              <th>Cliente Alegra</th>
+              <th>Monto</th>
+              <th>Resultado</th>
+              <th>Acción Realizada / Motivo</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${processedInvoices.map((inv, idx) => {
+              let resultLabel = '';
+              let bgStyle = '';
+              if (inv.estado_procesamiento === 'cliente_identificado_automaticamente') {
+                resultLabel = '<span class="badge badge-green">Identificado Auto</span>';
+                bgStyle = 'background:rgba(46,204,113,0.06);';
+              } else if (inv.estado_procesamiento === 'cliente_conciliado') {
+                resultLabel = '<span class="badge badge-blue">Conciliado Manual</span>';
+                bgStyle = 'background:rgba(0,119,182,0.06);';
+              } else if (inv.estado_procesamiento === 'cliente_creado') {
+                resultLabel = '<span class="badge badge-purple">Cliente Creado</span>';
+                bgStyle = 'background:rgba(168,85,247,0.06);';
+              } else if (inv.estado_procesamiento === 'ya_importada') {
+                resultLabel = '<span class="badge badge-gray">Ya Importado</span>';
+                bgStyle = 'background:rgba(0,0,0,0.02);';
+              } else if (inv.estado_procesamiento === 'ignorada_estado_no_valido') {
+                resultLabel = '<span class="badge badge-red">Ignorada Estado</span>';
+                bgStyle = 'background:rgba(231,76,60,0.04);';
+              } else if (inv.estado_procesamiento === 'producto_no_identificado') {
+                resultLabel = '<span class="badge badge-red">Producto No Identif.</span>';
+                bgStyle = 'background:rgba(231,76,60,0.04);';
+              } else if (inv.estado_procesamiento === 'pendiente_conciliacion') {
+                resultLabel = '<span class="badge badge-yellow">Pendiente Conciliación</span>';
+                bgStyle = 'background:rgba(243,156,18,0.06);';
+              } else {
+                resultLabel = `<span class="badge badge-red">Error: ${inv.mensaje_error}</span>`;
+                bgStyle = 'background:rgba(231,76,60,0.06);';
+              }
+              
+              return `
+                <tr style="${bgStyle}">
+                  <td>${idx + 1}</td>
+                  <td style="font-weight:600;">${inv.numero_comprobante}</td>
+                  <td>${inv.cliente_alegra}<br><span class="text-muted" style="font-size:0.75rem;">Doc: ${inv.identificacion_alegra}</span></td>
+                  <td>$${parseFloat(inv.despues_de_impuestos).toLocaleString('es-CO')}</td>
+                  <td>${resultLabel}</td>
+                  <td>${inv.accion_realizada || inv.mensaje_error}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      
+      <div style="text-align:right;margin-top:14px;flex-shrink:0;">
+        <button class="btn btn-primary" onclick="cerrarImportarAlegra(); switchSubmodClientes('clientes');">Cerrar Reporte</button>
+      </div>
+    </div>
+  `;
+}
+
+function cargarLibreriasPDF(callback) {
+  if (window.jspdf) {
+    callback();
+    return;
+  }
+  const s1 = document.createElement('script');
+  s1.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+  s1.onload = () => {
+    const s2 = document.createElement('script');
+    s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js';
+    s2.onload = callback;
+    document.head.appendChild(s2);
+  };
+  document.head.appendChild(s1);
+}
+
+function descargarPDFReporteAlegra(importRunId) {
+  cargarLibreriasPDF(() => {
+    const importRun = DB.getAlegraImports().find(x => x.id === importRunId);
+    if (!importRun) {
+      toast('No se encontró el registro de importación.', 'error');
+      return;
+    }
+    const invoices = DB.getAlegraInvoices().filter(inv => inv.importacion_id === importRunId);
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    doc.setFillColor(2, 62, 138);
+    doc.rect(0, 0, 210, 40, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("SWIMM STUDIO", 15, 18);
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("Reporte de Ejecución — Carga de Sesiones desde Alegra", 15, 25);
+    doc.text(`ID Importación: ${importRun.id}`, 15, 31);
+    doc.text(`Fecha: ${new Date(importRun.fecha_confirmacion).toLocaleString('es-CO')}`, 140, 18);
+    doc.text(`Usuario: ${importRun.usuario}`, 140, 25);
+    doc.text(`Archivo: ${importRun.archivo}`, 140, 31);
+    
+    doc.setTextColor(26, 26, 46);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Resumen de Ejecución", 15, 50);
+    
+    const kpis = [
+      ["Filas Leídas", importRun.total_filas.toString(), "Ignoradas Estado", importRun.total_ignoradas_estado.toString()],
+      ["Procesadas (Cargadas)", importRun.total_procesadas.toString(), "Producto No Identif.", importRun.total_producto_no_identificado.toString()],
+      ["Ya Importadas", importRun.total_ya_importadas.toString(), "Dejadas Pendientes", importRun.total_pendientes_conciliacion.toString()],
+      ["Sesiones Totales Cargadas", `+${importRun.sesiones_cargadas}`, "Clientes Creados / Conciliados", `${importRun.total_clientes_creados} / ${importRun.total_clientes_conciliados}`]
+    ];
+    
+    doc.autoTable({
+      startY: 55,
+      head: [],
+      body: kpis,
+      theme: 'plain',
+      styles: { fontSize: 9, cellPadding: 3 },
+      columnStyles: {
+        0: { fontStyle: 'bold', width: 45 },
+        1: { width: 25 },
+        2: { fontStyle: 'bold', width: 45 },
+        3: { width: 25 }
+      }
+    });
+    
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Detalle de Comprobantes Procesados", 15, doc.lastAutoTable.finalY + 12);
+    
+    const tableBody = invoices.map((inv, idx) => {
+      let resultadoText = '';
+      if (inv.estado_procesamiento === 'cliente_identificado_automaticamente') resultadoText = 'Auto-Identificado';
+      else if (inv.estado_procesamiento === 'cliente_conciliado') resultadoText = 'Conciliado Manual';
+      else if (inv.estado_procesamiento === 'cliente_creado') resultadoText = 'Cliente Creado';
+      else if (inv.estado_procesamiento === 'ya_importada') resultadoText = 'Ya Importado';
+      else if (inv.estado_procesamiento === 'ignorada_estado_no_valido') resultadoText = 'Ignorada Estado';
+      else if (inv.estado_procesamiento === 'producto_no_identificado') resultadoText = 'Producto No Identif.';
+      else if (inv.estado_procesamiento === 'pendiente_conciliacion') resultadoText = 'Pendiente Conciliación';
+      else resultadoText = 'Error';
+      
+      return [
+        (idx + 1).toString(),
+        inv.numero_comprobante,
+        inv.cliente_alegra,
+        inv.identificacion_alegra,
+        `$${parseFloat(inv.despues_de_impuestos).toLocaleString('es-CO')}`,
+        resultadoText,
+        inv.accion_realizada || inv.mensaje_error || ''
+      ];
+    });
+    
+    doc.autoTable({
+      startY: doc.lastAutoTable.finalY + 16,
+      head: [["#", "Factura", "Cliente Alegra", "Identificación", "Monto", "Resultado", "Acción / Motivo"]],
+      body: tableBody,
+      styles: { fontSize: 8, cellPadding: 2.5 },
+      headStyles: { fillColor: [2, 62, 138], textColor: [255, 255, 255] },
+      alternateRowStyles: { fillColor: [240, 248, 255] }
+    });
+    
+    doc.save(`reporte_alegra_${importRun.id}.pdf`);
+    toast('PDF descargado correctamente.', 'success');
+  });
+}
+
+function renderPendientesAlegra() {
+  const pendings = DB.getReconciliationPendings();
+  const tbody = document.getElementById('tabla-pendientes-alegra');
+  const noData = document.getElementById('no-pendientes-alegra');
+  
+  if (!tbody) return;
+  
+  if (pendings.length === 0) {
+    tbody.innerHTML = '';
+    noData.style.display = 'block';
+    return;
+  }
+  
+  noData.style.display = 'none';
+  tbody.innerHTML = pendings.map(r => {
+    const pqName = r.producto_identificado || '—';
+    const paquetes = DB.getConfig().paquetes || PAQUETES_DEFAULT;
+    const paq = paquetes.find(p => p.nombre.toUpperCase() === pqName.toUpperCase());
+    const numSesiones = paq ? paq.sesiones : 0;
+    
+    return `
+      <tr>
+        <td style="font-weight: 600;">${r.numero_comprobante}</td>
+        <td>${r.cliente_alegra}</td>
+        <td>${r.identificacion_alegra || '—'}</td>
+        <td>${r.fecha_creacion}</td>
+        <td>$${parseFloat(r.despues_de_impuestos).toLocaleString('es-CO')}</td>
+        <td><span class="paquete-badge pk-plata">${pqName}</span></td>
+        <td><span class="badge badge-blue">🎫 ${numSesiones}</span></td>
+        <td>
+          <div style="display:flex;gap:4px;">
+            <button class="btn btn-primary btn-xs" onclick="abrirResolverPendienteDiferido('${r.id}')">Resolver</button>
+            <button class="btn btn-danger btn-xs" onclick="eliminarPendienteDiferido('${r.id}')">🗑</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function abrirResolverPendienteDiferido(recId) {
+  const pendings = DB.getReconciliationPendings();
+  const r = pendings.find(x => x.id === recId);
+  if (!r) return;
+  
+  const prop = proponerNombresApellidos(r.cliente_alegra);
+  const candidates = obtenerCandidatosConciliacion(r.cliente_alegra);
+  
+  let candidatesHtml = '';
+  if (candidates.length > 0) {
+    candidatesHtml = candidates.map(c => {
+      let percent = Math.round(c.similitud * 100);
+      let badgeClass = percent >= 95 ? 'badge-green' : percent >= 80 ? 'badge-yellow' : 'badge-gray';
+      let label = percent >= 95 ? 'Fuerte' : percent >= 80 ? 'Media' : 'Baja';
+      const cNombre = getNombreCliente(c.cliente);
+      const cDoc = c.cliente.documento || 'Sin ID';
+      return `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:0.8rem;margin-bottom:6px;">
+          <div>
+            <strong>${cNombre}</strong><br>
+            <span class="text-muted" style="font-size:0.75rem;">Doc: ${c.cliente.tipo_documento || ''} ${cDoc}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="badge ${badgeClass}">${percent}% (${label})</span>
+            <button class="btn btn-primary btn-xs" onclick="confirmarResolucionPendienteDiferida('${recId}', 'associate', '${c.cliente.id}')">Asociar</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } else {
+    candidatesHtml = `<div style="font-size:0.78rem;color:var(--text-secondary);text-align:center;padding:10px;">No se encontraron clientes similares.</div>`;
+  }
+  
+  document.getElementById('modal-title').innerHTML = `⏳ Conciliación Factura ${r.numero_comprobante}`;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="card" style="padding:12px;background:var(--surface2);margin-bottom:14px;border:1px solid var(--border);">
+      <div class="ficha-stat"><span class="ficha-stat-label">Cliente Alegra</span><strong>${r.cliente_alegra}</strong></div>
+      <div class="ficha-stat"><span class="ficha-stat-label">Identificación</span><span>${r.identificacion_alegra || '—'}</span></div>
+      <div class="ficha-stat"><span class="ficha-stat-label">Monto Después Imp.</span><strong>$${parseFloat(r.despues_de_impuestos).toLocaleString('es-CO')}</strong></div>
+      <div class="ficha-stat"><span class="ficha-stat-label">Producto</span><span>${r.producto_identificado}</span></div>
+    </div>
+    
+    <div style="font-weight:600;font-size:0.85rem;margin-bottom:8px;">1. Candidatos Sugeridos:</div>
+    <div style="max-height:160px;overflow-y:auto;margin-bottom:14px;">
+      ${candidatesHtml}
+    </div>
+    
+    <div style="font-weight:600;font-size:0.85rem;margin-bottom:8px;border-top:1px solid var(--border);padding-top:10px;">2. O buscar en todos los clientes:</div>
+    <div style="display:flex;gap:6px;margin-bottom:14px;">
+      <select class="form-control" id="diff-reconcile-search-select" style="flex:1;font-size:0.82rem;height:34px;">
+        <option value="">-- Seleccionar cliente existente --</option>
+        ${DB.getClientes().map(c => `<option value="${c.id}">${getNombreCliente(c)} (${c.tipo_documento || ''} ${c.documento || ''})</option>`).join('')}
+      </select>
+      <button class="btn btn-secondary btn-sm" onclick="confirmarResolucionPendienteDiferida('${recId}', 'associate_search')">Asociar</button>
+    </div>
+    
+    <div style="font-weight:600;font-size:0.85rem;margin-bottom:8px;border-top:1px solid var(--border);padding-top:10px;">3. O crear como cliente nuevo:</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:10px;">
+      <div class="form-row">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Tipo Doc *</label>
+          <select class="form-control" id="diff-new-cli-tipo-doc" onchange="actualizarFormularioCreacionNITDiff()" style="font-size:0.8rem;padding:4px 8px;">
+            <option value="CC" selected>CC</option>
+            <option value="TI">TI</option>
+            <option value="CE">CE</option>
+            <option value="NIT">NIT</option>
+            <option value="PAS">PAS</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Documento *</label>
+          <input type="text" class="form-control" id="diff-new-cli-doc" value="${r.identificacion_alegra || ''}" style="font-size:0.8rem;padding:4px 8px;">
+        </div>
+      </div>
+      
+      <div id="diff-new-cli-natural-fields">
+        <div class="form-row">
+          <div class="form-group" style="margin:0;"><label class="form-label">Nombres *</label><input type="text" class="form-control" id="diff-new-cli-nombres" value="${prop.nombres}" style="font-size:0.8rem;padding:4px 8px;"></div>
+          <div class="form-group" style="margin:0;"><label class="form-label">Apellidos *</label><input type="text" class="form-control" id="diff-new-cli-apellidos" value="${prop.apellidos}" style="font-size:0.8rem;padding:4px 8px;"></div>
+        </div>
+      </div>
+      <div id="diff-new-cli-juridico-fields" style="display:none;">
+        <div class="form-group" style="margin:0;"><label class="form-label">Razón Social *</label><input type="text" class="form-control" id="diff-new-cli-razon-social" value="${r.cliente_alegra || ''}" style="font-size:0.8rem;padding:4px 8px;"></div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group" style="margin:0;"><label class="form-label">Dirección *</label><input type="text" class="form-control" id="diff-new-cli-direccion" value="" style="font-size:0.8rem;padding:4px 8px;"></div>
+        <div class="form-group" style="margin:0;"><label class="form-label">Teléfono *</label><input type="text" class="form-control" id="diff-new-cli-telefono" value="" style="font-size:0.8rem;padding:4px 8px;"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="margin:0;grid-column: span 2;"><label class="form-label">Email *</label><input type="email" class="form-control" id="diff-new-cli-email" value="" style="font-size:0.8rem;padding:4px 8px;"></div>
+      </div>
+      
+      <div style="text-align:right;">
+        <button class="btn btn-purple btn-sm" onclick="confirmarResolucionPendienteDiferida('${recId}', 'create_new')">👤 Crear y Asociar</button>
+      </div>
+    </div>
+  `;
+  
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
+  `;
+  
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
+function actualizarFormularioCreacionNITDiff() {
+  const tipoDoc = document.getElementById('diff-new-cli-tipo-doc').value;
+  const divNatural = document.getElementById('diff-new-cli-natural-fields');
+  const divJuridico = document.getElementById('diff-new-cli-juridico-fields');
+  if (tipoDoc === 'NIT') {
+    divNatural.style.display = 'none';
+    divJuridico.style.display = 'block';
+  } else {
+    divNatural.style.display = 'block';
+    divJuridico.style.display = 'none';
+  }
+}
+
+function confirmarResolucionPendienteDiferida(recId, mode, targetClienteId = null) {
+  const pendings = DB.getReconciliationPendings();
+  const r = pendings.find(x => x.id === recId);
+  if (!r) return;
+  
+  const clientes = DB.getClientes();
+  const lotes = DB.getLotes();
+  const sesiones = DB.getSesiones();
+  const sessionMovements = DB.getSessionMovements();
+  const alegraInvoices = DB.getAlegraInvoices();
+  const paquetes = DB.getConfig().paquetes || PAQUETES_DEFAULT;
+  
+  const paq = paquetes.find(p => p.nombre.toUpperCase() === r.producto_identificado.toUpperCase());
+  if (!paq) {
+    toast('Error: No se encontró el paquete asociado en el catálogo.', 'error');
+    return;
+  }
+  
+  let cli = null;
+  let isNew = false;
+  
+  if (mode === 'associate') {
+    cli = clientes.find(c => c.id === targetClienteId);
+  } else if (mode === 'associate_search') {
+    const selId = document.getElementById('diff-reconcile-search-select').value;
+    if (!selId) {
+      toast('Por favor selecciona un cliente de la lista.', 'warning');
+      return;
+    }
+    cli = clientes.find(c => c.id === selId);
+  } else if (mode === 'create_new') {
+    const tipoDoc = document.getElementById('diff-new-cli-tipo-doc').value;
+    const documento = document.getElementById('diff-new-cli-doc').value.trim();
+    const direccion = document.getElementById('diff-new-cli-direccion').value.trim();
+    const telefono = document.getElementById('diff-new-cli-telefono').value.trim();
+    const email = document.getElementById('diff-new-cli-email').value.trim();
+    
+    if (!tipoDoc || !documento) {
+      toast('El tipo y número de documento son requeridos.', 'error');
+      return;
+    }
+    if (!direccion || !telefono || !email) {
+      toast('Dirección, teléfono y email son obligatorios.', 'error');
+      return;
+    }
+    
+    let nombres = '';
+    let apellidos = '';
+    let razon_social = '';
+    let nombre = '';
+    
+    if (tipoDoc === 'NIT') {
+      razon_social = document.getElementById('diff-new-cli-razon-social').value.trim();
+      if (!razon_social) {
+        toast('La razón social es obligatoria para NIT.', 'error');
+        return;
+      }
+      nombre = razon_social;
+    } else {
+      nombres = document.getElementById('diff-new-cli-nombres').value.trim();
+      apellidos = document.getElementById('diff-new-cli-apellidos').value.trim();
+      if (!nombres || !apellidos) {
+        toast('Los nombres y apellidos son requeridos.', 'error');
+        return;
+      }
+      nombre = `${nombres} ${apellidos}`;
+    }
+    
+    const existeDoc = clientes.find(c => c.tipo_documento === tipoDoc && c.documento === documento);
+    if (existeDoc) {
+      toast(`Ya existe un cliente registrado con ${tipoDoc} ${documento}.`, 'error');
+      return;
+    }
+    
+    cli = {
+      id: genId('cl'),
+      tipo: 'activo',
+      nombre: nombre,
+      nombres: nombres,
+      apellidos: apellidos,
+      razon_social: razon_social,
+      tipo_documento: tipoDoc,
+      documento: documento,
+      direccion: direccion,
+      telefono: telefono,
+      email: email,
+      notas: 'Creado vía conciliación diferida Alegra',
+      autorizado: true,
+      vigencia_hasta: null,
+      paquete_actual: paq.nombre,
+      sesiones_disponibles: 0,
+      sesiones_usadas: 0,
+      sesiones_induccion: 0,
+      sesiones_induccion_realizada: false,
+      historial_sesiones: []
+    };
+    
+    clientes.push(cli);
+    isNew = true;
+    
+    if (tipoDoc !== 'NIT') {
+      const nadadores = DB.getNadadores();
+      nadadores.push({
+        id: genId('nad'),
+        tipo_documento: tipoDoc,
+        documento: documento,
+        nombres: nombres,
+        apellidos: apellidos,
+        fecha_nacimiento: '',
+        genero: 'No Responde',
+        email: email,
+        telefono: telefono,
+        direccion: direccion,
+        nada_desde: '',
+        asociaciones: [
+          { cliente_id: cli.id, rol: 'Principal', autorizado: true }
+        ]
+      });
+      DB.saveNadadores(nadadores);
+    }
+  }
+  
+  if (!cli) {
+    toast('Error: No se pudo asociar el cliente.', 'error');
+    return;
+  }
+  
+  cli.autorizado = true;
+  if (r.direccion) cli.direccion = r.direccion;
+  if (r.telefono) cli.telefono = r.telefono;
+  if (r.email) cli.email = r.email;
+  if (cli.tipo === 'pre_cliente') cli.tipo = 'activo';
+  if (cli.tipo_documento !== 'NIT' && r.cliente_alegra) {
+    const parts = r.cliente_alegra.trim().split(/\s+/);
+    cli.nombres = parts[0] || '';
+    cli.apellidos = parts.slice(1).join(' ') || '';
+    cli.nombre = r.cliente_alegra;
+  } else if (r.cliente_alegra) {
+    cli.razon_social = r.cliente_alegra;
+    cli.nombre = r.cliente_alegra;
+  }
+  if (cli.documento !== r.identificacion_alegra) {
+    cli.documento = r.identificacion_alegra;
+  }
+  
+  const saldoAnterior = cli.sesiones_disponibles || 0;
+  cli.sesiones_disponibles = (cli.sesiones_disponibles || 0) + paq.sesiones;
+  cli.paquete_actual = paq.nombre;
+  
+  const loteId = genId('lt');
+  const nuevoLote = {
+    id: loteId,
+    cliente_id: cli.id,
+    factura: r.numero_comprobante,
+    paquete_id: paq.id,
+    paquete_nombre: paq.nombre,
+    cantidad_sesiones: paq.sesiones,
+    fecha_activacion: null,
+    fecha_vencimiento: null,
+    estado_vigencia: 'no_iniciado',
+    precio_historico: paq.precio,
+    sesiones_disponibles_inicialmente: paq.sesiones,
+    vigencia_dias: paq.vigencia_dias > 0 ? paq.vigencia_dias : null,
+    vigencia_ilimitada: paq.vigencia_dias <= 0,
+    induccion: paq.incluye_induccion,
+    compartible: paq.compartible,
+    fecha_compra: r.fecha_creacion,
+    fecha_importacion: new Date().toISOString()
+  };
+  lotes.push(nuevoLote);
+  
+  const esRenovacion = cli.sesiones_induccion_realizada || (sesiones.some(s => s.cliente_id === cli.id && s.estado === 'USADA'));
+  for (let i = 1; i <= paq.sesiones; i++) {
+    const serialStr = String(i).padStart(3, '0');
+    sesiones.push({
+      id: `ses_${r.numero_comprobante}_${serialStr}`,
+      codigo: `${r.numero_comprobante}-${serialStr}`,
+      cliente_id: cli.id,
+      lote_id: loteId,
+      estado: 'DISPONIBLE',
+      fecha_vencimiento: null,
+      fecha_consumo: null,
+      nadador_id: null,
+      reserva_id: null,
+      carril_id: null,
+      servicios_adicionales: ''
+    });
+  }
+  
+  if (paq.incluye_induccion && !esRenovacion) {
+    sesiones.push({
+      id: `ses_${r.numero_comprobante}_IND`,
+      codigo: `${r.numero_comprobante}-IND`,
+      cliente_id: cli.id,
+      lote_id: loteId,
+      estado: 'DISPONIBLE',
+      fecha_vencimiento: null,
+      fecha_consumo: null,
+      nadador_id: null,
+      reserva_id: null,
+      carril_id: null,
+      servicios_adicionales: 'Sesión de Inducción'
+    });
+    cli.sesiones_induccion = (cli.sesiones_induccion || 0) + 1;
+  }
+  
+  const movementId = genId('sm');
+  const nuevoMovimiento = {
+    id: movementId,
+    tipo: 'carga_por_factura_alegra',
+    cantidad: paq.sesiones,
+    cliente_id: cli.id,
+    factura: r.numero_comprobante,
+    paquete_asociado: paq.nombre,
+    importacion_id: r.importacion_id,
+    saldo_anterior: saldoAnterior,
+    saldo_nuevo: cli.sesiones_disponibles,
+    fecha: new Date().toISOString(),
+    usuario: isAdmin() ? 'admin' : 'recepcion',
+    observacion: `Carga de sesiones desde Alegra por factura ${r.numero_comprobante} (Conciliación diferida)`
+  };
+  sessionMovements.push(nuevoMovimiento);
+  
+  if (!cli.historial_sesiones) cli.historial_sesiones = [];
+  cli.historial_sesiones.push({
+    id: genId('m'),
+    fecha: new Date().toISOString(),
+    tipo: 'carga',
+    cantidad: paq.sesiones,
+    saldo_resultante: cli.sesiones_disponibles,
+    motivo: `Lote ${r.numero_comprobante} (${paq.nombre}) cargado via Alegra (Conciliación diferida)`,
+    es_admin: isAdmin(),
+    reserva_id: null
+  });
+  
+  const existingInvIdx = alegraInvoices.findIndex(inv => inv.numero_comprobante === r.numero_comprobante);
+  const invRecord = {
+    numero_comprobante: r.numero_comprobante,
+    comprobante: r.comprobante,
+    estado: r.estado,
+    cliente_alegra: r.cliente_alegra,
+    identificacion_alegra: r.identificacion_alegra,
+    fecha_creacion: r.fecha_creacion,
+    subtotal: r.subtotal,
+    descuento: r.descuento,
+    antes_de_impuestos: r.antes_de_impuestos,
+    impuestos: r.impuestos,
+    despues_de_impuestos: r.despues_de_impuestos,
+    producto_identificado: paq.nombre,
+    cliente_asociado_id: cli.id,
+    importacion_id: r.importacion_id,
+    estado_procesamiento: isNew ? 'cliente_creado' : 'cliente_conciliado',
+    mensaje_error: '',
+    accion_realizada: `Carga de ${paq.sesiones} sesiones (Conciliación diferida)`
+  };
+  if (existingInvIdx >= 0) {
+    alegraInvoices[existingInvIdx] = invRecord;
+  } else {
+    alegraInvoices.push(invRecord);
+  }
+  
+  const filteredPendings = pendings.filter(x => x.id !== recId);
+  DB.saveReconciliationPendings(filteredPendings);
+  
+  DB.saveClientes(clientes);
+  DB.saveLotes(lotes);
+  DB.saveSesiones(sesiones);
+  DB.saveAlegraInvoices(alegraInvoices);
+  DB.saveSessionMovements(sessionMovements);
+  
+  toast(`Factura ${r.numero_comprobante} aplicada con éxito.`, 'success');
+  cerrarModal();
+  renderPendientesAlegra();
+  renderClientes();
+  registrarAuditoria('conciliar_factura_alegra', `Factura ${r.numero_comprobante} conciliada de forma diferida para cliente ${cli.nombre}. Creadas ${paq.sesiones} sesiones.`);
+}
+
+function eliminarPendienteDiferido(recId) {
+  mostrarModal('🗑 Eliminar factura pendiente', '¿Está seguro de eliminar esta factura de la lista de conciliación pendiente? No se cargarán sesiones.', 'Eliminar', 'Cancelar', () => {
+    const pendings = DB.getReconciliationPendings();
+    const r = pendings.find(x => x.id === recId);
+    if (!r) return;
+    
+    const alegraInvoices = DB.getAlegraInvoices();
+    const existingInvIdx = alegraInvoices.findIndex(inv => inv.numero_comprobante === r.numero_comprobante);
+    const invRecord = {
+      numero_comprobante: r.numero_comprobante,
+      comprobante: r.comprobante,
+      estado: r.estado,
+      cliente_alegra: r.cliente_alegra,
+      identificacion_alegra: r.identificacion_alegra,
+      fecha_creacion: r.fecha_creacion,
+      subtotal: r.subtotal,
+      descuento: r.descuento,
+      antes_de_impuestos: r.antes_de_impuestos,
+      impuestos: r.impuestos,
+      despues_de_impuestos: r.despues_de_impuestos,
+      producto_identificado: r.producto_identificado,
+      cliente_asociado_id: null,
+      importacion_id: r.importacion_id,
+      estado_procesamiento: 'eliminada_pendiente',
+      mensaje_error: '',
+      accion_realizada: 'Eliminada de pendientes por usuario'
+    };
+    if (existingInvIdx >= 0) {
+      alegraInvoices[existingInvIdx] = invRecord;
+    } else {
+      alegraInvoices.push(invRecord);
+    }
+    
+    const filteredPendings = pendings.filter(x => x.id !== recId);
+    DB.saveReconciliationPendings(filteredPendings);
+    DB.saveAlegraInvoices(alegraInvoices);
+    
+    toast('Factura pendiente eliminada.', 'success');
+    renderPendientesAlegra();
+    registrarAuditoria('eliminar_pendiente_alegra', `Factura ${r.numero_comprobante} eliminada de la lista de pendientes por el usuario.`);
+  });
 }
 
 function verDetalleImp(id){
@@ -5493,7 +7495,7 @@ document.getElementById('fact-drop-zone').addEventListener('drop',e=>{
   if(!pinConfigured&&(!cfg.admin_pin||cfg.admin_pin==='')){
     setTimeout(()=>mostrarSetupPin(),600);
   }
-  console.log('🏊 Swimm Studio v2.1 — Iniciado');
+  console.log('🏊 Swimm Studio v3.1 — Iniciado');
 })();
 </script>
 </body>
