@@ -9598,7 +9598,9 @@
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(u), 100);
+      // No revocamos el Object URL durante la sesión activa en el navegador.
+      // Esto evita fallos cuando el usuario tiene activa la opción 'Preguntar dónde guardar cada archivo'
+      // y se demora seleccionando la ruta en la ventana de diálogo del sistema operativo.
     }
     function actualizarHeaderFecha() { const d = new Date(); document.getElementById('header-date').textContent = d.toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }); }
 
