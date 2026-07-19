@@ -3748,6 +3748,8 @@
     // MODALES
     // ----------------------------------------------------------------
     function mostrarModal(titulo, cuerpo, btnConf, btnCanc, cb) {
+      const box = document.getElementById('modal-box');
+      if (box) { box.style.maxWidth = ''; box.style.width = ''; } // Reset custom widths
       document.getElementById('modal-title').innerHTML = titulo;
       document.getElementById('modal-body').innerHTML = cuerpo;
       const footer = document.getElementById('modal-footer');
@@ -9035,14 +9037,14 @@
     // ================================================================
 
 
-    function parseCSVLine(line) {
+    function parseCSVLine(line, delimiter = ',') {
       const result = []; let current = ''; let inQuotes = false;
       for (let i = 0; i < line.length; i++) {
         const ch = line[i];
         if (ch === '"' && !inQuotes) { inQuotes = true; }
         else if (ch === '"' && inQuotes && line[i + 1] === '"') { current += '"'; i++; } // escaped quote
         else if (ch === '"' && inQuotes) { inQuotes = false; }
-        else if (ch === ',' && !inQuotes) { result.push(current); current = ''; }
+        else if (ch === delimiter && !inQuotes) { result.push(current); current = ''; }
         else { current += ch; }
       }
       result.push(current);
@@ -9053,7 +9055,7 @@
       if (!isAdmin()) { toast('🔒 Se requiere modo administrador.', 'error'); return; }
       let csv, filename;
       if (tipo === 'saldos') {
-        csv = 'nombre,documento,tipo_documento,tipo,paquete,sesiones_disponibles,vigencia_hasta,sesiones_induccion,induccion_realizada,telefono,email,notas\n';
+        csv = 'nombre,documento,tipo_documento,tipo,paquete,sesiones_disponibles,vigencia_hasta,sesiones_induccion,induccion_realizada,telefono,email,notes\n';
         csv += '"Carlos Martínez","1020453122","CC","activo","ORO","9","2026-09-30","0","true","3101234567","carlos@email.com","Ejemplo cliente activo"\n';
         csv += '"Valentina Rodríguez","1032589741","CC","activo","PLATA","4","2026-08-15","0","true","3209876543","valentina@email.com",""\n';
         csv += '"Jorge Cárdenas","","","historico","","0","","0","false","","","Cliente antiguo sin paquete activo"\n';
@@ -9077,47 +9079,210 @@
       const file = input.files[0]; if (!file) return;
       const reader = new FileReader();
       reader.onload = e => {
-        const lines = e.target.result.split('\n').map(l => l.trim()).filter(Boolean);
+        const text = e.target.result;
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
         if (lines.length < 2) { toast('El CSV está vacío o sin datos.', 'error'); return; }
-        const rawHeaders = parseCSVLine(lines[0]);
+
+        // Detección automática del delimitador: punto y coma para Excel español, sino coma
+        const delimiter = lines[0].includes(';') ? ';' : ',';
+
+        const rawHeaders = parseCSVLine(lines[0], delimiter);
         const headers = rawHeaders.map(h => h.replace(/['"]/g, '').trim().toLowerCase());
         const nomIdx = headers.findIndex(h => h.includes('nombre'));
-        if (nomIdx < 0) { toast('Falta la columna "nombre" en el CSV.', 'error'); return; }
+        if (nomIdx < 0) {
+          toast('Falta la columna "nombre" en el CSV.', 'error');
+          if (input) input.value = '';
+          return;
+        }
+
         const rows = lines.slice(1).map(l => {
-          const cols = parseCSVLine(l);
+          const cols = parseCSVLine(l, delimiter);
           const obj = {};
-          headers.forEach((h, i) => obj[h] = (cols[i] || '').replace(/^"|"$/g, '').trim());
+          headers.forEach((h, i) => {
+            let val = (cols[i] || '').trim();
+            if (val.startsWith('"') && val.endsWith('"')) val = val.substring(1, val.length - 1).trim();
+            obj[h] = val;
+          });
           return obj;
-        }).filter(r => r.nombre && r.nombre.trim());
+        });
 
-        if (!rows.length) { toast('No se encontraron filas válidas.', 'warning'); return; }
-
-        const preview = document.getElementById('saldos-preview');
-        preview.style.display = 'block';
-        preview.innerHTML = `
-      <div class="alert alert-info" style="margin-top:12px">🔍 Vista previa — <strong>${rows.length}</strong> filas encontradas (mostrando primeras 8):</div>
-      <div class="preview-wrap">
-        <table class="data-table">
-          <thead><tr><th>Nombre</th><th>Documento</th><th>Tipo</th><th>Paquete</th><th>Sesiones</th><th>Vigencia</th></tr></thead>
-          <tbody>${rows.slice(0, 8).map(r => `<tr>
-            <td><strong>${r.nombre}</strong></td>
-            <td class="text-sm">${r.documento || '<span class="text-muted">—</span>'}</td>
-            <td>${(r.tipo || 'activo').toLowerCase() === 'historico' ? '<span class="badge badge-gray">Histórico</span>' : '<span class="badge badge-blue">Activo</span>'}</td>
-            <td>${r.paquete ? `<span class="badge badge-blue">${r.paquete.toUpperCase()}</span>` : '<span class="text-muted">—</span>'}</td>
-            <td><span class="badge ${parseInt(r.sesiones_disponibles || 0) > 5 ? 'badge-green' : parseInt(r.sesiones_disponibles || 0) > 0 ? 'badge-yellow' : 'badge-gray'}">🎫 ${r.sesiones_disponibles || 0}</span></td>
-            <td class="text-sm">${r.vigencia_hasta || '<span class="text-muted">—</span>'}</td>
-          </tr>`).join('')}
-          ${rows.length > 8 ? `<tr><td colspan="6" class="text-muted text-sm" style="text-align:center;padding:8px">...y <strong>${rows.length - 8}</strong> filas más</td></tr>` : ''}</tbody>
-        </table>
-      </div>
-      <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end">
-        <button class="btn btn-secondary" onclick="document.getElementById('saldos-preview').style.display='none';document.getElementById('csv-saldos-input').value=''">Cancelar</button>
-        <button class="btn btn-primary" onclick='procesarSaldosIniciales(${JSON.stringify(rows).replace(/</g, "&lt;").replace(/'/g, "&#39;")})'>✅ Confirmar importación (${rows.length} clientes)</button>
-      </div>
-    `;
-        document.getElementById('saldos-resultado').style.display = 'none';
+        abrirModalCSVSaldosPreview(rows);
+        if (input) input.value = '';
       };
       reader.readAsText(file, 'UTF-8');
+    }
+
+    function abrirModalCSVSaldosPreview(rows) {
+      const clientes = DB.getClientes();
+      const cfg = DB.getConfig();
+      const paquetes = cfg.paquetes || PAQUETES_DEFAULT;
+
+      let creados = 0;
+      let actualizados = 0;
+      let erroresCount = 0;
+      const procesados = [];
+
+      rows.forEach((row) => {
+        const nombre = (row.nombre || '').trim();
+        const documento = (row.documento || '').trim();
+        const tipo = (row.tipo || 'activo').toLowerCase().trim() === 'historico' ? 'historico' : 'activo';
+
+        let sesionesVal = parseInt(row.sesiones_disponibles);
+        if (isNaN(sesionesVal)) sesionesVal = 0;
+
+        let sesIndVal = parseInt(row.sesiones_induccion);
+        if (isNaN(sesIndVal)) sesIndVal = 0;
+
+        const vigencia = (row.vigencia_hasta || '').trim();
+        const paqueteNombre = (row.paquete || '').toUpperCase().trim();
+
+        let hasError = false;
+        let errorMsg = '';
+
+        if (!nombre) {
+          hasError = true;
+          errorMsg = 'Falta el nombre';
+        } else if (vigencia && !vigencia.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          hasError = true;
+          errorMsg = 'Fmt Expiración incorrecto (debe ser AAAA-MM-DD)';
+        } else if (parseInt(row.sesiones_disponibles) < 0 || parseInt(row.sesiones_induccion) < 0) {
+          hasError = true;
+          errorMsg = 'Sesiones negativas';
+        }
+
+        let isNuevo = true;
+        let clienteId = null;
+        if (!hasError) {
+          let cli = documento ? clientes.find(c => c.documento && c.documento.trim() === documento) : null;
+          if (!cli) cli = clientes.find(c => c.nombre.toLowerCase().trim() === nombre.toLowerCase().trim());
+          if (cli) {
+            isNuevo = false;
+            clienteId = cli.id;
+            actualizados++;
+          } else {
+            creados++;
+          }
+        } else {
+          erroresCount++;
+        }
+
+        procesados.push({
+          row,
+          hasError,
+          errorMsg,
+          isNuevo,
+          clienteId,
+          nombre,
+          documento,
+          tipo,
+          sesiones: Math.max(0, sesionesVal),
+          sesInd: Math.max(0, sesIndVal),
+          indRealizada: (row.induccion_realizada || '').toLowerCase() === 'true',
+          vigencia,
+          paqueteNombre
+        });
+      });
+
+      let rowsHtml = '';
+      procesados.forEach((p, idx) => {
+        let filaEstilo = '';
+        let badgeEstado = '';
+
+        if (p.hasError) {
+          filaEstilo = 'style="background-color:#ffebeb;color:#c0392b"';
+          badgeEstado = `<span class="badge" style="background:#e74c3c;color:#fff">⚠️ ${p.errorMsg}</span>`;
+        } else if (p.isNuevo) {
+          filaEstilo = 'style="background-color:#eef7ff"';
+          badgeEstado = '<span class="badge badge-blue">🆕 Nuevo</span>';
+        } else {
+          filaEstilo = 'style="background-color:#effaf3"';
+          badgeEstado = '<span class="badge badge-green">🔄 Actualizar</span>';
+        }
+
+        rowsHtml += `
+          <tr ${filaEstilo}>
+            <td style="text-align:center;font-weight:bold">${idx + 1}</td>
+            <td><strong>${p.nombre || '<span style="color:#d35400">[Vacío]</span>'}</strong></td>
+            <td style="font-family:monospace">${p.documento || '<span style="color:#95a5a6">—</span>'}</td>
+            <td>${p.tipo === 'historico' ? '<span class="badge badge-gray">Histórico</span>' : '<span class="badge badge-blue">Activo</span>'}</td>
+            <td>${p.paqueteNombre ? `<span style="font-weight:600">${p.paqueteNombre}</span>` : '<span style="color:#95a5a6">—</span>'}</td>
+            <td style="text-align:center;font-weight:600">🎫 ${p.sesiones}</td>
+            <td style="font-family:monospace">${p.vigencia || '<span style="color:#95a5a6">—</span>'}</td>
+            <td style="text-align:center">${badgeEstado}</td>
+          </tr>
+        `;
+      });
+
+      const totalValidos = procesados.filter(p => !p.hasError).length;
+
+      mostrarModal('📋 VISTA PREVIA DE IMPORTACIÓN', `
+        <div style="margin-bottom:14px">
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-bottom:14px">
+            <div style="padding:10px; border:1px solid var(--border-color); border-radius:6px; text-align:center; background:var(--bg-secondary)">
+              <div style="font-size:0.75rem; color:var(--text-secondary)">Total Leídos</div>
+              <div style="font-size:1.4rem; font-weight:bold">${procesados.length}</div>
+            </div>
+            <div style="padding:10px; border:1px solid var(--border-color); border-radius:6px; text-align:center; background:#eef7ff">
+              <div style="font-size:0.75rem; color:#0077b6">Clientes Nuevos</div>
+              <div style="font-size:1.4rem; font-weight:bold; color:#0077b6">${creados}</div>
+            </div>
+            <div style="padding:10px; border:1px solid var(--border-color); border-radius:6px; text-align:center; background:#effaf3">
+              <div style="font-size:0.75rem; color:#10b981">Actualizaciones</div>
+              <div style="font-size:1.4rem; font-weight:bold; color:#10b981">${actualizados}</div>
+            </div>
+            <div style="padding:10px; border:1px solid var(--border-color); border-radius:6px; text-align:center; background:#ffebeb">
+              <div style="font-size:0.75rem; color:#c0392b">Registros con Error</div>
+              <div style="font-size:1.4rem; font-weight:bold; color:#c0392b">${erroresCount}</div>
+            </div>
+          </div>
+          
+          <div style="font-size:0.85rem; margin-bottom:8px; color:var(--text-secondary)">
+            Revisa las celdas abajo. Los registros válidos se guardarán. Los inválidos (color rojo) serán omitidos al confirmar.
+          </div>
+
+          <div style="max-height:350px; overflow-y:auto; border:1px solid var(--border-color); border-radius:6px">
+            <table class="data-table" style="width:100%; border-collapse:collapse; margin-bottom:0">
+              <thead style="position:sticky; top:0; background:var(--bg-secondary); z-index:1">
+                <tr>
+                  <th style="width:40px; text-align:center">#</th>
+                  <th>Nombre</th>
+                  <th>Documento</th>
+                  <th>Tipo</th>
+                  <th>Paquete</th>
+                  <th style="text-align:center">Sesiones</th>
+                  <th>Expiración</th>
+                  <th style="text-align:center">Destino</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `, null, null);
+
+      const btnConfirmar = totalValidos > 0
+        ? `<button class="btn btn-primary" onclick="confirmarModalImportacionSaldos('${encodeURIComponent(JSON.stringify(procesados.filter(p => !p.hasError)))}')">🚀 Importar ${totalValidos} Registros</button>`
+        : `<button class="btn btn-primary" disabled style="opacity:0.5; cursor:not-allowed">🚀 Importar</button>`;
+
+      document.getElementById('modal-footer').innerHTML = `
+        <button class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
+        ${btnConfirmar}
+      `;
+      document.getElementById('modal-box').style.maxWidth = '900px';
+      document.getElementById('modal-box').style.width = '95%';
+    }
+
+    function confirmarModalImportacionSaldos(encodedData) {
+      try {
+        const rows = JSON.parse(decodeURIComponent(encodedData));
+        cerrarModal();
+        procesarSaldosIniciales(rows.map(p => p.row));
+      } catch (err) {
+        console.error(err);
+        toast('Error procesando los datos de importación.', 'error');
+      }
     }
 
     function procesarSaldosIniciales(rows) {
