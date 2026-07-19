@@ -2975,6 +2975,27 @@
             </div>
           </div>
 
+          <div class="card"
+            style="margin-bottom:16px;border:1.5px solid rgba(245,158,11,0.35);background:linear-gradient(135deg,rgba(245,158,11,0.06),rgba(245,158,11,0.02))">
+            <div class="card-title" style="color:var(--amarillo)">🚀 Simulación de Go-Live</div>
+            <p class="text-sm text-muted mb-14">
+              Esta acción prepara la aplicación para salir a producción:
+              <br>• Pone en <strong>cero</strong> todos los saldos de sesiones de los clientes.
+              <br>• Conserva todos los clientes registrados y parámetros.
+              <br>• Conserva el histórico de reservas anterior a la fecha de corte.
+              <br>• Borra todas las reservas realizadas a partir de la fecha de corte.
+            </p>
+            <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+              <div class="form-group" style="margin:0">
+                <label class="form-label">📅 Fecha de corte del histórico</label>
+                <input type="date" class="form-control" id="golive-fecha-corte" value="2026-06-01"
+                  style="max-width:160px">
+              </div>
+              <button class="btn btn-warning" onclick="abrirConfirmarGoLive()"
+                style="background:var(--amarillo);border-color:var(--amarillo)">🚀 Ejecutar Go-Live</button>
+            </div>
+          </div>
+
           <div class="danger-zone">
             <div class="danger-zone-title">⚠️ Zona de peligro</div>
             <p class="text-sm text-muted mb-14">Esta acción eliminará TODOS los datos. No se puede deshacer.</p>
@@ -9436,6 +9457,68 @@
       if (pinConfig) localStorage.setItem('swimm_pin_configured', pinConfig);
       // Preservar el PIN del admin en la config
       cerrarModal(); toast('Reseteando...', 'success'); setTimeout(() => location.reload(), 1000);
+    }
+
+    function abrirConfirmarGoLive() {
+      if (!isAdmin()) { toast('🔒 Solo el administrador puede ejecutar la simulación de Go-Live.', 'error'); return; }
+      const fechaCorteVal = document.getElementById('golive-fecha-corte')?.value || '';
+      if (!fechaCorteVal.match(/^\d{4}-\d{2}-\d{2}$/)) { toast('⚠️ Por favor ingresa una fecha de corte válida (AAAA-MM-DD).', 'warning'); return; }
+
+      mostrarModal('🚀 SIMULACIÓN DE GO-LIVE',
+        `Estás a punto de simular el Go-Live del sistema con la fecha de corte <strong>\${fechaCorteVal}</strong>.<br><br>` +
+        `Esto hará lo siguiente:<br>` +
+        `• Pondrá a <strong>cero</strong> todos los saldos de sesiones de los clientes (disponibles, usadas, inducción).<br>` +
+        `• Limpiará el historial individual del saldo de cada cliente.<br>` +
+        `• Conservará todos los clientes registrados y parámetros de configuración.<br>` +
+        `• Conservará el histórico de reservas anterior al <strong>\${fechaCorteVal}</strong>.<br>` +
+        `• Borrará todas las reservas de prueba que sean del <strong>\${fechaCorteVal}</strong> en adelante.<br><br>` +
+        `Escribe <strong>GOLIVE</strong> para confirmar:`, null, null);
+
+      document.getElementById('modal-body').innerHTML += `<input type="text" class="form-control mt-14" id="confirm-golive-input" placeholder="Escribe GOLIVE" autocomplete="off">`;
+      document.getElementById('modal-footer').innerHTML = `
+        <button class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmarSimulacionGoLive('\${fechaCorteVal}')" style="background:var(--verde);border-color:var(--verde)">🚀 Confirmar Go-Live</button>
+      `;
+      document.getElementById('modal-overlay').classList.add('active');
+      setTimeout(() => document.getElementById('confirm-golive-input')?.focus(), 100);
+    }
+
+    function confirmarSimulacionGoLive(fechaCorte) {
+      if (!isAdmin()) { toast('🔒 Solo el administrador puede confirmar el Go-Live.', 'error'); return; }
+      const input = document.getElementById('confirm-golive-input');
+      if (!input || input.value.trim().toUpperCase() !== 'GOLIVE') {
+        toast('Escribe exactamente "GOLIVE" para proceder.', 'error');
+        return;
+      }
+
+      // 1. Resetear saldos de clientes a 0
+      const clientes = DB.getClientes();
+      clientes.forEach(c => {
+        c.sesiones_disponibles = 0;
+        c.sesiones_usadas = 0;
+        c.sesiones_induccion = 0;
+        c.vigencia_hasta = null;
+        c.autorizado = false;
+        c.historial_sesiones = [];
+      });
+      DB.saveClientes(clientes);
+
+      // 2. Limpiar reservas: conservar las anteriores a fechaCorte, borrar las del día de corte o posteriores
+      const reservas = DB.getReservas();
+      const reservasConservadas = reservas.filter(r => r.fecha < fechaCorte);
+      DB.saveReservas(reservasConservadas);
+
+      // 3. Limpiar inventario de sesiones, lotes, movimientos e importaciones
+      DB.saveSesiones([]);
+      DB.saveLotes([]);
+      DB.saveSessionMovements([]);
+      DB.saveAlegraImports([]);
+      DB.saveAlegraInvoices([]);
+      DB.saveReconciliationPendings([]);
+
+      cerrarModal();
+      toast('🚀 Simulación de Go-Live completada con éxito.', 'success');
+      setTimeout(() => location.reload(), 1200);
     }
 
     function activarModoProduccion() {
