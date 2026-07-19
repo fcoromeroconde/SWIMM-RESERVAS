@@ -9465,19 +9465,19 @@
       if (!fechaCorteVal.match(/^\d{4}-\d{2}-\d{2}$/)) { toast('⚠️ Por favor ingresa una fecha de corte válida (AAAA-MM-DD).', 'warning'); return; }
 
       mostrarModal('🚀 SIMULACIÓN DE GO-LIVE',
-        `Estás a punto de simular el Go-Live del sistema con la fecha de corte <strong>\${fechaCorteVal}</strong>.<br><br>` +
+        `Estás a punto de simular el Go-Live del sistema con la fecha de corte <strong>${fechaCorteVal}</strong>.<br><br>` +
         `Esto hará lo siguiente:<br>` +
         `• Pondrá a <strong>cero</strong> todos los saldos de sesiones de los clientes (disponibles, usadas, inducción).<br>` +
         `• Limpiará el historial individual del saldo de cada cliente.<br>` +
         `• Conservará todos los clientes registrados y parámetros de configuración.<br>` +
-        `• Conservará el histórico de reservas anterior al <strong>\${fechaCorteVal}</strong>.<br>` +
-        `• Borrará todas las reservas de prueba que sean del <strong>\${fechaCorteVal}</strong> en adelante.<br><br>` +
+        `• Conservará el histórico de reservas anterior al <strong>${fechaCorteVal}</strong>.<br>` +
+        `• Borrará todas las reservas de prueba que sean del <strong>${fechaCorteVal}</strong> en adelante.<br><br>` +
         `Escribe <strong>GOLIVE</strong> para confirmar:`, null, null);
 
       document.getElementById('modal-body').innerHTML += `<input type="text" class="form-control mt-14" id="confirm-golive-input" placeholder="Escribe GOLIVE" autocomplete="off">`;
       document.getElementById('modal-footer').innerHTML = `
         <button class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="confirmarSimulacionGoLive('\${fechaCorteVal}')" style="background:var(--verde);border-color:var(--verde)">🚀 Confirmar Go-Live</button>
+        <button class="btn btn-primary" onclick="confirmarSimulacionGoLive('${fechaCorteVal}')" style="background:var(--verde);border-color:var(--verde)">🚀 Confirmar Go-Live</button>
       `;
       document.getElementById('modal-overlay').classList.add('active');
       setTimeout(() => document.getElementById('confirm-golive-input')?.focus(), 100);
