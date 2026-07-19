@@ -9589,7 +9589,17 @@
     // ----------------------------------------------------------------
     // UTILS
     // ----------------------------------------------------------------
-    function descargarArchivo(c, n, t) { const b = new Blob([c], { type: t }); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = n; a.click(); URL.revokeObjectURL(u); }
+    function descargarArchivo(c, n, t) {
+      const b = new Blob([c], { type: t });
+      const u = URL.createObjectURL(b);
+      const a = document.createElement('a');
+      a.href = u;
+      a.download = n;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(u), 100);
+    }
     function actualizarHeaderFecha() { const d = new Date(); document.getElementById('header-date').textContent = d.toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }); }
 
     // Drag & drop facturación
