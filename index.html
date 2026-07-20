@@ -2749,8 +2749,11 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">⏰ Tiempo mínimo de cancelación (horas)</label>
-                <input type="number" class="form-control" id="param-tiempo-cancel" min="0" max="48" step="0.5"
-                  style="max-width:120px">
+                <div style="display:flex;gap:8px">
+                  <input type="number" class="form-control" id="param-tiempo-cancel" min="0" max="48" step="0.5"
+                    style="max-width:120px">
+                  <button class="btn btn-secondary btn-sm" onclick="guardarTiempoCancelacion()">Guardar</button>
+                </div>
                 <div class="text-sm text-muted mt-8">Si el cliente cancela antes de este tiempo, la sesión se devuelve.
                   Si no, se cuenta como No Show.</div>
               </div>
@@ -2759,7 +2762,7 @@
                 <div style="display:flex;gap:8px">
                   <input type="password" class="form-control" id="param-admin-pin" placeholder="••••"
                     style="max-width:120px">
-                  <button class="btn btn-secondary btn-sm" onclick="guardarConfigGeneral()">Guardar</button>
+                  <button class="btn btn-secondary btn-sm" onclick="guardarPinAdministrador()">Guardar</button>
                 </div>
                 <div class="text-sm text-muted mt-8">PIN de acceso a funciones administrativas protegidas.</div>
               </div>
@@ -8252,21 +8255,31 @@
       localStorage.setItem('swimm_pin_configured', '1');
     }
 
-    function guardarConfigGeneral() {
+    function guardarTiempoCancelacion() {
       if (!isAdmin()) { toast('Se requiere modo administrador para guardar configuración.', 'error'); return; }
       const cfg = DB.getConfig();
       const tc = parseFloat(document.getElementById('param-tiempo-cancel')?.value) || 2;
-      const pin = document.getElementById('param-admin-pin')?.value;
       cfg.tiempo_cancelacion_horas = tc;
-      if (pin && pin.length >= 4) {
-        // Ask for confirmation when changing PIN
-        const pin2 = prompt('Confirma la nueva contraseña de administrador:');
-        if (pin2 === null) return;
-        if (pin !== pin2) { toast('Las contraseñas no coinciden. PIN no cambiado.', 'error'); return; }
-        cfg.admin_pin = pin;
-        toast('Contraseña de administrador actualizada.', 'success');
+      DB.saveConfig(cfg);
+      toast('Tiempo de cancelación guardado.', 'success');
+      registrarAuditoria('guardar_tiempo_cancelacion', `Tiempo de cancelación configurado en ${tc} horas.`);
+    }
+
+    function guardarPinAdministrador() {
+      if (!isAdmin()) { toast('Se requiere modo administrador para guardar configuración.', 'error'); return; }
+      const cfg = DB.getConfig();
+      const pin = document.getElementById('param-admin-pin')?.value;
+      if (!pin || pin.length < 4) {
+        toast('El PIN debe tener al menos 4 caracteres.', 'error');
+        return;
       }
-      DB.saveConfig(cfg); toast('Configuración guardada.', 'success');
+      const pin2 = prompt('Confirma la nueva contraseña de administrador:');
+      if (pin2 === null) return;
+      if (pin !== pin2) { toast('Las contraseñas no coinciden. PIN no cambiado.', 'error'); return; }
+      cfg.admin_pin = pin;
+      DB.saveConfig(cfg);
+      toast('Contraseña de administrador actualizada.', 'success');
+      registrarAuditoria('guardar_pin_administrador', 'Contraseña de administrador actualizada.');
     }
 
     // ---- CARRILES ----
