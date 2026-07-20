@@ -4951,6 +4951,20 @@
         <label class="toggle-switch"><input type="checkbox" id="cli-autorizado" ${cli ? (cli.autorizado ? 'checked' : '') : 'checked'}><span class="toggle-slider"></span></label>
         <span class="form-label" style="margin:0">Autorizado para reservar</span>
       </div>
+      <div class="form-group">
+        <label class="form-label">Estado del cliente</label>
+        ${isAdmin() ? `
+          <select class="form-control" id="cli-tipo">
+            <option value="activo" ${!cli || cli.tipo === 'activo' ? 'selected' : ''}>Activo</option>
+            <option value="pre_cliente" ${cli && cli.tipo === 'pre_cliente' ? 'selected' : ''}>Pre-Cliente</option>
+            <option value="historico" ${cli && cli.tipo === 'historico' ? 'selected' : ''}>Histórico</option>
+          </select>
+        ` : `
+          <div style="padding: 10px; background: var(--bg-card); border-radius: 6px; font-weight: 600; border: 1px solid var(--border-color);">
+            ${cli && cli.tipo === 'pre_cliente' ? 'Pre-Cliente' : cli && cli.tipo === 'activo' ? 'Activo' : 'Histórico'}
+          </div>
+        `}
+      </div>
     </div>
     <div class="form-group"><label class="form-label">Notas</label><textarea class="form-control" id="cli-notas" rows="2">${cli?.notas || ''}</textarea></div>
   `;
@@ -5013,20 +5027,25 @@
         return;
       }
 
+      const selectTipo = document.getElementById('cli-tipo');
+
       let cliId = id;
       if (id) {
         const idx = clientes.findIndex(c => c.id === id);
         if (idx >= 0) {
-          Object.assign(clientes[idx], {
+          const cli = clientes[idx];
+          const tipo = selectTipo ? selectTipo.value : cli.tipo;
+          Object.assign(cli, {
             nombre, nombres, apellidos, razon_social, tipo_documento: tipoDoc, documento,
-            direccion, telefono, email, vigencia_hasta, autorizado, notas
+            direccion, telefono, email, vigencia_hasta, autorizado, notas, tipo
           });
         }
       } else {
         cliId = genId('cl');
+        const tipo = selectTipo ? selectTipo.value : 'pre_cliente';
         const nuevo = {
           id: cliId,
-          tipo: 'pre_cliente', // Empieza como pre-cliente hasta que registre facturas
+          tipo,
           nombre, nombres, apellidos, razon_social, tipo_documento: tipoDoc, documento,
           direccion, telefono, email, vigencia_hasta, autorizado, notas,
           paquete_actual: null, sesiones_disponibles: 0, sesiones_usadas: 0, sesiones_induccion: 0,
@@ -9383,7 +9402,14 @@
             });
           }
           if (indRealizada) cli.sesiones_induccion_realizada = true;
-          if (vigencia) { cli.vigencia_hasta = vigencia; if (tipo === 'activo') cli.autorizado = true; }
+          const hoy = new Date().toISOString().split('T')[0];
+          if (tipo === 'activo' || ((cli.tipo === 'historico' || cli.tipo === 'pre_cliente') && (sesiones > 0 || sesInd > 0) && vigencia && vigencia >= hoy)) {
+            cli.tipo = 'activo';
+            if (vigencia) cli.autorizado = true;
+          } else if (row.tipo) {
+            cli.tipo = tipo;
+          }
+          if (vigencia) cli.vigencia_hasta = vigencia;
           if (paquete && !cli.paquete_actual) cli.paquete_actual = paquete.nombre;
           if (documento && !cli.documento) { cli.documento = documento; }
           if (row.tipo_documento && !cli.tipo_documento) cli.tipo_documento = (row.tipo_documento || 'CC').toUpperCase();
