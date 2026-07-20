@@ -3415,15 +3415,16 @@
     // DATOS DE EJEMPLO Y AYUDANTES DE LOGICA DE NEGOCIO v3.1
     // ----------------------------------------------------------------
     function initDatosEjemplo() {
-      // Si no hay nadadores ni lotes, inicializamos arreglos vacíos
-      if (!DB.get('nadadores')) DB.saveNadadores([]);
-      if (!DB.get('lotes')) DB.saveLotes([]);
-      if (!DB.get('sesiones')) DB.saveSesiones([]);
-      if (!DB.get('auditoria')) DB.saveAuditoria([]);
-      if (!DB.get('alegra_imports')) DB.saveAlegraImports([]);
-      if (!DB.get('alegra_invoices')) DB.saveAlegraInvoices([]);
-      if (!DB.get('session_movements')) DB.saveSessionMovements([]);
-      if (!DB.get('reconciliation_pendings')) DB.saveReconciliationPendings([]);
+      // Inicializamos en memoria las estructuras para que no sean undefined,
+      // pero SIN disparar syncToSupabase() ni sobreescribir la base de datos remota.
+      if (InMemoryDB.nadadores === undefined || InMemoryDB.nadadores === null) InMemoryDB.nadadores = [];
+      if (InMemoryDB.lotes === undefined || InMemoryDB.lotes === null) InMemoryDB.lotes = [];
+      if (InMemoryDB.sesiones === undefined || InMemoryDB.sesiones === null) InMemoryDB.sesiones = [];
+      if (InMemoryDB.auditoria === undefined || InMemoryDB.auditoria === null) InMemoryDB.auditoria = [];
+      if (InMemoryDB.alegra_imports === undefined || InMemoryDB.alegra_imports === null) InMemoryDB.alegra_imports = [];
+      if (InMemoryDB.alegra_invoices === undefined || InMemoryDB.alegra_invoices === null) InMemoryDB.alegra_invoices = [];
+      if (InMemoryDB.session_movements === undefined || InMemoryDB.session_movements === null) InMemoryDB.session_movements = [];
+      if (InMemoryDB.reconciliation_pendings === undefined || InMemoryDB.reconciliation_pendings === null) InMemoryDB.reconciliation_pendings = [];
     }
 
     function calcularEdadYMenor(fechaNac) {
