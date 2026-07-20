@@ -3839,9 +3839,13 @@
         }
         return sesiones.some(s => !s.codigo.endsWith('-IND'));
       }
-      // Fallback era anterior (legado)
-      if (tipoSesion === 'induccion') return (c.sesiones_induccion || 0) > 0;
-      return (c.sesiones_disponibles || 0) > 0;
+      // Fallback era anterior (legado) - descontando reservas pendientes
+      if (tipoSesion === 'induccion') {
+        const resInd = DB.getReservas().filter(r => r.cliente_id === c.id && r.tipo_sesion === 'induccion' && r.estado === 'reservado').length;
+        return (c.sesiones_induccion || 0) - resInd > 0;
+      }
+      const resNormal = DB.getReservas().filter(r => r.cliente_id === c.id && (r.tipo_sesion || 'normal') === 'normal' && r.estado === 'reservado').length;
+      return (c.sesiones_disponibles || 0) - resNormal > 0;
     }
 
     // ---- Restricciones de edición ----
@@ -4868,6 +4872,9 @@
         let ses = c.sesiones_disponibles || 0;
         if (lotesCli.length > 0 || sesionesCli.length > 0) {
           ses = sesionesCli.filter(s => s.estado === 'DISPONIBLE').length;
+        } else {
+          const resNormal = DB.getReservas().filter(r => r.cliente_id === c.id && (r.tipo_sesion || 'normal') === 'normal' && r.estado === 'reservado').length;
+          ses = Math.max(0, ses - resNormal);
         }
         const ind = c.sesiones_induccion || 0;
         const pqBadge = c.paquete_actual ? `<span class="paquete-badge ${pqColor[c.paquete_actual] || ''}">${c.paquete_actual}</span>` : '<span class="text-muted">—</span>';
@@ -5110,10 +5117,13 @@
         ns = sesionesCli.filter(s => s.estado === 'NO-SHOW').length;
         venc = sesionesCli.filter(s => s.estado === 'VENCIDA').length;
       } else {
-        // Fallback era anterior
-        disp = cli.sesiones_disponibles || 0;
+        // Fallback era anterior (legado) - descontando reservas correspondientes
+        const activeRes = DB.getReservas().filter(r => r.cliente_id === id && r.estado === 'reservado');
+        const reservNormal = activeRes.filter(r => (r.tipo_sesion || 'normal') === 'normal').length;
+        disp = Math.max(0, (cli.sesiones_disponibles || 0) - reservNormal);
+        reserv = reservNormal;
         usd = cli.sesiones_usadas || 0;
-        compr = disp + usd;
+        compr = (cli.sesiones_disponibles || 0) + usd;
       }
 
       const total = reservas.length;
