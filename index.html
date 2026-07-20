@@ -4940,7 +4940,11 @@
     </div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-control" id="cli-email" value="${cli?.email || ''}"></div>
-      <div class="form-group"><label class="form-label">Cliente desde</label><input type="date" class="form-control" id="cli-vigencia" value="${cli?.vigencia_hasta || ''}"></div>
+      <div class="form-group">
+        <label class="form-label">Vigencia autorización *</label>
+        <input type="date" class="form-control" id="cli-vigencia" value="${cli?.vigencia_hasta || ''}">
+        <div class="text-xs text-muted mt-4">Fecha límite para poder realizar reservas.</div>
+      </div>
     </div>
     <div class="form-row">
       <div class="form-group" style="display:flex;align-items:center;gap:10px;padding-top:10px">
