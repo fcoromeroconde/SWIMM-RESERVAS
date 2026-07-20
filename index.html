@@ -9051,6 +9051,32 @@
       return result;
     }
 
+    function normalizarFecha(str) {
+      if (!str) return null;
+      const clean = str.replace(/[\/\.\s]+/g, '-').trim();
+      const parts = clean.split('-');
+      if (parts.length !== 3) return null;
+
+      let y, m, d;
+      if (parts[2].length === 4) {
+        y = parseInt(parts[2], 10);
+        m = parseInt(parts[1], 10);
+        d = parseInt(parts[0], 10);
+      } else if (parts[0].length === 4) {
+        y = parseInt(parts[0], 10);
+        m = parseInt(parts[1], 10);
+        d = parseInt(parts[2], 10);
+      } else {
+        return null;
+      }
+
+      if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
+      if (m < 1 || m > 12) return null;
+      if (d < 1 || d > 31) return null;
+
+      return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    }
+
     function descargarPlantillaCSV(tipo) {
       if (!isAdmin()) { toast('🔒 Se requiere modo administrador.', 'error'); return; }
       let csv, filename;
@@ -9133,18 +9159,26 @@
         let sesIndVal = parseInt(row.sesiones_induccion);
         if (isNaN(sesIndVal)) sesIndVal = 0;
 
-        const vigencia = (row.vigencia_hasta || '').trim();
+        let vigencia = (row.vigencia_hasta || '').trim();
         const paqueteNombre = (row.paquete || '').toUpperCase().trim();
 
         let hasError = false;
         let errorMsg = '';
 
+        if (vigencia) {
+          const norm = normalizarFecha(vigencia);
+          if (norm) {
+            vigencia = norm;
+            row.vigencia_hasta = norm; // Actualiza el objeto row directamente para importación
+          } else {
+            hasError = true;
+            errorMsg = 'Fecha inválida (usar DD/MM/AAAA o AAAA-MM-DD)';
+          }
+        }
+
         if (!nombre) {
           hasError = true;
           errorMsg = 'Falta el nombre';
-        } else if (vigencia && !vigencia.match(/^\d{4}-\d{2}-\d{2}$/)) {
-          hasError = true;
-          errorMsg = 'Fmt Expiración incorrecto (debe ser AAAA-MM-DD)';
         } else if (parseInt(row.sesiones_disponibles) < 0 || parseInt(row.sesiones_induccion) < 0) {
           hasError = true;
           errorMsg = 'Sesiones negativas';
@@ -9382,25 +9416,32 @@
       const file = input.files[0]; if (!file) return;
       const reader = new FileReader();
       reader.onload = e => {
-        const lines = e.target.result.split('\n').map(l => l.trim()).filter(Boolean);
+        const text = e.target.result;
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
         if (lines.length < 2) { toast('El CSV está vacío o sin datos.', 'error'); return; }
-        const rawHeaders = parseCSVLine(lines[0]);
+
+        // Detección de delimitador para histórico
+        const delimiter = lines[0].includes(';') ? ';' : ',';
+
+        const rawHeaders = parseCSVLine(lines[0], delimiter);
         const headers = rawHeaders.map(h => h.replace(/['"]/g, '').trim().toLowerCase());
         const fechaIdx = headers.findIndex(h => h.includes('fecha'));
         const horaIdx = headers.findIndex(h => h.includes('hora'));
         const carrilIdx = headers.findIndex(h => h.includes('carril'));
         const estadoIdx = headers.findIndex(h => h.includes('estado'));
         if (fechaIdx < 0 || horaIdx < 0 || carrilIdx < 0 || estadoIdx < 0) {
-          toast('Faltan columnas requeridas: fecha, hora, carril, estado.', 'error'); return;
+          toast('Faltan columnas requeridas: fecha, hora, carril, estado.', 'error'); if (input) input.value = ''; return;
         }
         const cliIdx = headers.findIndex(h => h.includes('cliente'));
         const tsIdx = headers.findIndex(h => h.includes('tipo'));
 
         const estadosValidos = ['asistio', 'no_show', 'cancelado', 'reservado'];
         const allRows = lines.slice(1).map(l => {
-          const cols = parseCSVLine(l);
+          const cols = parseCSVLine(l, delimiter);
+          let rawFecha = (cols[fechaIdx] || '').replace(/['"]/g, '').trim();
+          const normFecha = normalizarFecha(rawFecha);
           return {
-            fecha: (cols[fechaIdx] || '').replace(/['"]/g, '').trim(),
+            fecha: normFecha || rawFecha,
             hora: (cols[horaIdx] || '').replace(/['"]/g, '').trim(),
             carril: (cols[carrilIdx] || '').replace(/['"]/g, '').trim(),
             estado: (cols[estadoIdx] || 'asistio').replace(/['"]/g, '').trim().toLowerCase(),
